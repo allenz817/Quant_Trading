@@ -1,8 +1,8 @@
 from backtesting import Backtest, Strategy
 from backtesting.lib import crossover
-
 from backtesting.test import SMA, GOOG
-
+import yfinance as yf
+import pandas as pd
 
 class SmaCross(Strategy):
     n1 = 10
@@ -19,8 +19,13 @@ class SmaCross(Strategy):
         elif crossover(self.sma2, self.sma1):
             self.sell()
 
+#get financial data from yfinance
+stock = yf.download('GOOG', start='2020-01-01', end='2020-12-31')[
+    ['Open', 'High', 'Low', 'Close', 'Volume']]
+#reshape multi-index columns
+stock.columns = stock.columns.droplevel(1) 
 
-bt = Backtest(GOOG, SmaCross,
+bt = Backtest(stock, SmaCross,
               cash=10000, commission=.002,
               exclusive_orders=True)
 
