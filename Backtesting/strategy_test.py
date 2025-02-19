@@ -155,4 +155,4 @@ print(output._strategy)
 print(output._trades.to_string())
 
 print(output)
-bt.plot(filename='plots/backtest_result.html')
+bt.plot(filename='backtest_result.html')
