@@ -110,7 +110,7 @@ def optim_func(series):
 #BACKTESTING
 
 #1) get financial data from yfinance
-ticker = '1801.HK' 
+ticker = 'AAPL' 
 stock = yf.download(ticker, start='2022-01-01', end='2024-12-31')[
     ['Open', 'High', 'Low', 'Close', 'Volume']]
 # reshape multi-index columns
