@@ -99,7 +99,60 @@ class BollingerBands(Strategy):
         elif price > self.upper:
             self.position.close()
             
-            
+class CombinedRsiMacd(Strategy):
+    rsi_period = 7
+    rsi_upper_bound = 75
+    rsi_lower_bound = 25
+    fast_period = 12
+    slow_period = 26
+    signal_period = 9
+    signal_window = 7  # Number of days within which both signals should occur
+
+    def init(self):
+        close = self.data.Close
+        self.daily_rsi = self.I(ta.RSI, close, self.rsi_period)
+        self.macd, self.signal, _ = self.I(ta.MACD, close, self.fast_period, self.slow_period, self.signal_period)
+        self.rsi_signal_days = []
+        self.macd_signal_days = []
+
+    def next(self):
+        price = self.data.Close[-1]
+        current_day = len(self.data.Close) - 1
+
+        # Check for RSI signal
+        if crossover(self.daily_rsi, self.rsi_lower_bound):
+            self.rsi_signal_days.append(current_day)
+        elif crossover(self.rsi_upper_bound,self.daily_rsi):
+            self.rsi_signal_days.append(current_day)
+
+        # Check for MACD signal
+        if crossover(self.macd, self.signal):
+            self.macd_signal_days.append(current_day)
+        elif crossover(self.signal, self.macd):
+            self.macd_signal_days.append(current_day)
+
+        # Check if both buy signals occurred within the signal window
+        if self.rsi_signal_days and self.macd_signal_days:
+            for rsi_day in self.rsi_signal_days:
+                for macd_day in self.macd_signal_days:
+                    if abs(rsi_day - macd_day) <= self.signal_window:
+                        # Check if both MACD line and signal line are negative
+                        if self.macd[-1] < 0 and self.signal[-1] < 0:
+                            self.buy(sl=0.95*price)
+                            self.rsi_signal_days = []
+                            self.macd_signal_days = []
+                            return
+
+        # Check if both sell signals occurred within the signal window
+        if self.rsi_signal_days and self.macd_signal_days:
+            for rsi_day in self.rsi_signal_days:
+                for macd_day in self.macd_signal_days:
+                    if abs(rsi_day - macd_day) <= self.signal_window:
+                        if self.position.is_long:
+                            self.position.close()
+                        self.rsi_signal_days = []
+                        self.macd_signal_days = []
+                        return         
 
 def optim_func(series):
     if series['# Trades'] < 10:
@@ -116,13 +169,13 @@ stock = yf.download(ticker, start='2022-01-01', end='2024-12-31')[
 # reshape multi-index columns
 stock.columns = stock.columns.droplevel(1) 
 
-bt = Backtest(stock, RsiIndicator,
+bt = Backtest(stock, CombinedRsiMacd,
               cash=10000, commission=.002,
               exclusive_orders=True)
 
 #2) choose output option
-#output = bt.run()
-#"""
+output = bt.run()
+"""
 output, heatmap = bt.optimize(
     rsi_period=range(7, 28),
     rsi_upper_bound=range(75, 90, 5),
@@ -133,7 +186,7 @@ output, heatmap = bt.optimize(
     #max_tries = 100
     return_heatmap=True
 )
-#"""
+"""
 
 #3) heatmap
 """
