@@ -6,8 +6,8 @@ import talib as ta
 
 class WeightedStrat(Strategy):
     rsi_period = 7
-    rsi_upper_bound = 75
-    rsi_lower_bound = 25
+    rsi_upper_bound = 72.5
+    rsi_lower_bound = 27.5
     fast_period = 12
     slow_period = 26
     signal_period = 9
@@ -19,6 +19,7 @@ class WeightedStrat(Strategy):
     macd_weight = 0.5
     bb_weight = 0.5
     signal_window = 9
+    recovery_window = 5
 
     def init(self):
         close = self.data.Close
@@ -29,13 +30,12 @@ class WeightedStrat(Strategy):
         self.rsi_signals = []
         self.macd_signals = []
         self.bb_signals = []
-        
-        self.buy()
-        
+        self.sell_price = None
+        self.sell_day = None
+  
     def next(self):
         price = self.data.Close[-1]
         current_day = len(self.data.Close) - 1 # Day count starts at 34
-
 
         # Calculate weighted signals
         if crossover(self.daily_rsi, self.rsi_lower_bound):
@@ -85,11 +85,23 @@ class WeightedStrat(Strategy):
 
         # Execute sell order if total weighted signal value exceeds the threshold
         if total_signal <= self.sell_threshold and self.position.is_long:
+            self.sell_price = price
+            self.sell_day = current_day
             self.position.close()
+            
+            
+        """
+        # Check for price recovery within the recovery timeframe
+        if self.sell_price is not None and self.sell_day is not None:
+            if current_day - self.sell_day <= self.recovery_window and price > self.sell_price:
+                self.buy()
+                self.sell_price = None
+                self.sell_day = None
+        """
 
 # BACKTESTING
 # Get financial data from yfinance
-ticker = 'MSFT' 
+ticker = 'AAPL' 
 stock = yf.download(ticker, start='2024-01-01', end='2024-12-31')[['Open', 'High', 'Low', 'Close', 'Volume']]
 # reshape multi-index columns
 stock.columns = stock.columns.droplevel(1) 
