@@ -1,3 +1,4 @@
 TO DO:
 - use optimizer for weights
 - add moving average crossover strat
+- add indicator to sell less when on an upward trend

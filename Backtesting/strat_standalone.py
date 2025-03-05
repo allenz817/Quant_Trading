@@ -23,7 +23,7 @@ class SmaCross(Strategy):
         elif crossover(self.sma2, self.sma1):
             self.sell()
 
-class RsiIndicator(Strategy):
+class Rsi(Strategy):
     rsi_period = 7
     rsi_upper_bound = 75
     rsi_lower_bound = 25
@@ -66,7 +66,7 @@ class RsiIndicator(Strategy):
         ax.legend()
     """
 
-class MACDIndicator(Strategy):
+class Macd(Strategy):
     fast_period = 12
     slow_period = 26
     signal_period = 9
@@ -81,7 +81,7 @@ class MACDIndicator(Strategy):
         elif crossover(self.signal, self.macd):
             self.position.close()
 
-class BollingerBands(Strategy):
+class Bb(Strategy):
     n = 20
     n_stdev = 3.0
 
@@ -99,7 +99,7 @@ class BollingerBands(Strategy):
         elif price > self.upper:
             self.position.close()
             
-class CombinedRsiMacd(Strategy):
+class Rsi_Macd(Strategy):
     rsi_period = 7
     rsi_upper_bound = 75
     rsi_lower_bound = 25
@@ -169,7 +169,7 @@ stock = yf.download(ticker, start='2022-01-01', end='2024-12-31')[
 # reshape multi-index columns
 stock.columns = stock.columns.droplevel(1) 
 
-bt = Backtest(stock, CombinedRsiMacd,
+bt = Backtest(stock, Macd,
               cash=10000, commission=.002,
               exclusive_orders=True)
 
