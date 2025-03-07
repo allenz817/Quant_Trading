@@ -5,20 +5,66 @@ import pandas as pd
 import numpy as np
 import talib as ta
 
+class IndicatorInit:
+    def __init__(self, data):
+        self.data = data
+        self.rsi_daily_days = 7
+        self.rsi_upper_bound = 80
+        self.rsi_lower_bound = 25
+        self.fast_period = 12
+        self.slow_period = 26
+        self.signal_period = 9
+        self.bb_period = 20
+        self.bb_stdev = 2
+
+    def init_indicators(self):
+        close = self.data.Close
+        self.rsi_daily = ta.RSI(close, self.rsi_daily_days)
+        self.macd, self.signal, _ = ta.MACD(close, self.fast_period, self.slow_period, self.signal_period)
+        self.bb_upper, self.bb_middle, self.bb_lower = ta.BBANDS(close, self.bb_period, self.bb_stdev)
+
+    def get_signals(self):
+        signals = {
+            'rsi_daily': self.rsi_daily,
+            'macd': self.macd,
+            'signal': self.signal,
+            'bb_upper': self.bb_upper,
+            'bb_middle': self.bb_middle,
+            'bb_lower': self.bb_lower
+        }
+        return signals
+
+class SignalCalc:
+    def __init__(self, signals, indicator_signals):
+        self.signals = signals
+        self.indicator_signals = indicator_signals
+
+    def calc_rsi_daily_signal(self):
+        if crossover(self.signals['rsi_daily'], self.indicator_signals.rsi_lower_bound):
+            return 1
+        elif crossover(self.indicator_signals.rsi_upper_bound, self.signals['rsi_daily']):
+            return -1
+        else:
+            return 0
+
+    def calc_macd_signal(self):
+        if crossover(self.signals['macd'], self.signals['signal']):
+            return 1
+        elif crossover(self.signals['signal'], self.signals['macd']):
+            return -1
+        else:
+            return 0
+
+    def calc_bb_signal(self, price):
+        if price < self.signals['bb_lower'][-1]:
+            return 1
+        elif price > self.signals['bb_upper'][-1]:
+            return -1
+        else:
+            return 0
+
 class WeightedStrat(Strategy):
-    # Define parameters and weights for each signal
-    rsi_daily_days = 7
-    rsi_upper_bound = 80
-    rsi_lower_bound = 25
-    fast_period = 12
-    slow_period = 26
-    signal_period = 9
-    bb_period = 20
-    bb_stdev = 2
-    
-    signal_window = 9
-    recovery_window = 5
-    
+
     rsi_daily_weight_buy = 0.5
     rsi_daily_weight_sell = 0.25
     rsi_weekly_weight = 0
@@ -31,26 +77,23 @@ class WeightedStrat(Strategy):
     buy_threshold = 1.0  # Threshold for executing buy orders
     sell_threshold = -1.0  # Threshold for executing sell orders
     
+    signal_window = 9
+    recovery_window = 5
 
     def init(self):
-        close = self.data.Close
-        self.rsi_daily = self.I(ta.RSI, close, self.rsi_daily_days)
-        self.macd, self.signal, _ = self.I(ta.MACD, close, self.fast_period, self.slow_period, self.signal_period)
-        self.bb_upper, self.bb_middle, self.bb_lower = self.I(ta.BBANDS, close, self.bb_period, self.bb_stdev)
+        self.indicator_init = IndicatorInit(self.data)
+        self.indicator_init.init_indicators()
+        self.signals = self.indicator_init.get_signals()
+        self.signal_calc = SignalCalc(self.signals, self.indicator_init)
 
-        # Calculate weekly RSI
-        weekly_close = resample_apply('W-FRI', ta.RSI, close, self.rsi_daily_days)
-        self.rsi_weekly = self.I(lambda: weekly_close, name='Weekly RSI')
-        
         self.rsi_daily_signals = []
-        self.rsi_weekly_signals = []
         self.macd_signals = []
         self.bb_signals = []
         self.bb_middle_above_test = []  # List to store results of Bollinger Bands middle line above test
         self.bb_middle_below_test = []  # List to store results of Bollinger Bands middle line below test
         self.sell_price = None
         self.sell_day = None
-        
+
         # Register self-defined indicator for plotting
         self.bb_signal_values = np.full(len(self.data.Close), np.nan)
         self.buy_signal_values = np.full(len(self.data.Close), np.nan)
@@ -58,70 +101,46 @@ class WeightedStrat(Strategy):
         self.I(lambda: self.bb_signal_values, name='BB Signal')
         self.I(lambda: self.buy_signal_values, name='Buy Signal')
         self.I(lambda: self.sell_signal_values, name='Sell Signal')
-  
+
     def next(self):
         price = self.data.Close[-1]
-        current_day = len(self.data.Close) - 1 # Day count starts at 34
+        current_day = len(self.data.Close) - 1
 
         # Calculate weighted signals
-        if crossover(self.rsi_daily, self.rsi_lower_bound):
-            rsi_daily_signal = 1 
-        elif crossover(self.rsi_upper_bound, self.rsi_daily):
-            rsi_daily_signal = -1
-        else: rsi_daily_signal = 0
-        
-        if crossover(self.rsi_weekly, self.rsi_lower_bound):
-            rsi_weekly_signal = 1 
-        elif crossover(self.rsi_upper_bound, self.rsi_weekly):
-            rsi_weekly_signal = -1
-        else: rsi_weekly_signal = 0
-        
-        if crossover(self.macd, self.signal):
-            macd_signal = 1 
-        elif crossover(self.signal, self.macd):
-            macd_signal = -1
-        else: macd_signal = 0
-        
-        if price < self.bb_lower[-1]:
-            bb_signal = 1 
-        elif price > self.bb_upper[-1]:
-            bb_signal = -1
-        else: bb_signal = 0
-        #    bb_signal = 1 - 2 * ((price - self.bb_lower[-1]) / (self.bb_upper[-1] - self.bb_lower[-1]))
-        
+        rsi_daily_signal = self.signal_calc.calc_rsi_daily_signal()
+        macd_signal = self.signal_calc.calc_macd_signal()
+        bb_signal = self.signal_calc.calc_bb_signal(price)
+
         # Store signals in lists
         self.rsi_daily_signals.append(rsi_daily_signal)
-        self.rsi_weekly_signals.append(rsi_weekly_signal)
         self.macd_signals.append(macd_signal)
         self.bb_signals.append(bb_signal)
-        
+
         # Keep only the last `signal_window` signals
         if len(self.rsi_daily_signals) > self.signal_window:
             self.rsi_daily_signals.pop(0)
-        if len(self.rsi_weekly_signals) > self.signal_window:
-            self.rsi_weekly_signals.pop(0)
         if len(self.macd_signals) > self.signal_window:
             self.macd_signals.pop(0)
         if len(self.bb_signals) > self.signal_window:
             self.bb_signals.pop(0)
-            
+
         # Check if price is above or below the middle line of Bollinger Bands
-        if price > self.bb_middle[-1]:
+        if price > self.signals['bb_middle'][-1]:
             self.bb_middle_above_test.append(1)
             self.bb_middle_below_test.append(0)
-        elif price < self.bb_middle[-1]:
+        elif price < self.signals['bb_middle'][-1]:
             self.bb_middle_above_test.append(0)
             self.bb_middle_below_test.append(1)
         else:
             self.bb_middle_above_test.append(0)
             self.bb_middle_below_test.append(0)
-        
+
         # Keep only the last 6 days for the Bollinger Bands middle line test
         if len(self.bb_middle_above_test) > 6:
             self.bb_middle_above_test.pop(0)
         if len(self.bb_middle_below_test) > 6:
             self.bb_middle_below_test.pop(0)
-        
+
         # Check if price has been above the middle line for 3 consecutive days and then below for 3 consecutive days
         if sum(self.bb_middle_above_test[:3]) == 3 and sum(self.bb_middle_below_test[3:]) == 3:
             bb_reversal_signal = -1
@@ -134,44 +153,28 @@ class WeightedStrat(Strategy):
         # Calculate total weighted signal value over the lookback period
         buy_signal = (
             np.max(self.rsi_daily_signals) * self.rsi_daily_weight_buy +
-            np.max(self.rsi_weekly_signals) * self.rsi_weekly_weight +
             np.max(self.macd_signals) * self.macd_weight +
             np.max(self.bb_signals) * self.bb_weight_buy +
             bb_reversal_signal * self.bb_reversal_weight_buy
         )
-        
+
         sell_signal = (
             np.min(self.rsi_daily_signals) * self.rsi_daily_weight_sell +
-            np.min(self.rsi_weekly_signals) * self.rsi_weekly_weight +
             np.min(self.macd_signals) * self.macd_weight +
-            np.min(self.bb_signals) * self.bb_weight_buy +
+            np.min(self.bb_signals) * self.bb_weight_sell +
             bb_reversal_signal * self.bb_reversal_weight_sell
         )
-        
-        # Execute order if total weighted signal value exceeds the threshold
-        if buy_signal >= self.buy_threshold and not self.position.is_long:
-            self.buy(
-                #size=0.5, 
-                sl=0.95*price,
-            )
 
+        # Execute buy order if total weighted signal value exceeds the threshold
+        if buy_signal >= self.buy_threshold and not self.position.is_long:
+            self.buy(sl=0.95*price)
+
+        # Execute sell order if total weighted signal value exceeds the threshold
         if sell_signal <= self.sell_threshold and self.position.is_long:
             self.sell_price = price
             self.sell_day = current_day
             self.position.close()
-            
-        """
-        # Check for price recovery within the recovery timeframe
-        if self.sell_price is not None and self.sell_day is not None:
-            if (current_day - self.sell_day <= self.recovery_window and 
-                price > self.sell_price and 
-                not self.position.is_long
-                ):
-                self.buy()
-                self.sell_price = None
-                self.sell_day = None
-        """
-        
+
         # Update self-defined values for plotting
         self.bb_signal_values[current_day] = bb_signal
         self.buy_signal_values[current_day] = buy_signal
