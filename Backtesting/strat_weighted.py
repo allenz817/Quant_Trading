@@ -18,10 +18,12 @@ class WeightedStrat(Strategy):
     ema5_period = 5 
     ema10_period = 10
     ema20_period = 20
+    volume_avg_period = 20
+    volume_avg_period_short = 10
     adx_period = 14
     
     signal_window = 9
-    recovery_window = 5
+    signal_window_short = 5
     
     # Assignment of weights (4 indicators)
     # 1-RSI
@@ -38,11 +40,17 @@ class WeightedStrat(Strategy):
     # 4-EMA
     ema_cross_weight = 0.5
     # 5-ADX
-    adx_weight = 0.5
+    adx_weight = 0.25
+    # 6-Price Momentum
+    price_mmt_weight = 0.25
+    # 7-Extreme Reversal
+    extreme_reversal_weight = 0.25
     
     buy_threshold = 1.0  # Threshold for executing buy orders
     sell_threshold = -1.0  # Threshold for executing sell orders
     adx_threshold = 25
+    volume_ratio_threshold = 1.5
+    Volume_ratio_threshold_high = 1.75
     
 
     def init(self):
@@ -56,7 +64,7 @@ class WeightedStrat(Strategy):
         self.adx = self.I(ta.ADX, self.data.High, self.data.Low, close, self.adx_period)
         self.plus_di = self.I(ta.PLUS_DI, self.data.High, self.data.Low, close, self.adx_period)  # Initialize +DI
         self.minus_di = self.I(ta.MINUS_DI, self.data.High, self.data.Low, close, self.adx_period)  # Initialize -DI
-        
+  
         """
         # Calculate weekly RSI
         weekly_close = resample_apply('W-FRI', ta.RSI, close, self.rsi_daily_days)
@@ -64,14 +72,15 @@ class WeightedStrat(Strategy):
         """
         
         self.rsi_daily_signals = []
-        #self.rsi_weekly_signals = []
         self.macd_signals = []
         self.bb_signals = []
+        self.ema_cross_signals = []
         self.adx_signals = []
         self.bb_middle_above_test = []  # List to store results of Bollinger Bands middle line above test
         self.bb_middle_below_test = []  # List to store results of Bollinger Bands middle line below test
-        self.sell_price = None
-        self.sell_day = None
+        self.price_mmt_signals = []
+        #self.sell_price = None
+        #self.sell_day = None
         
         # Register self-defined indicator for plotting
         self.bb_signal_values = np.full(len(self.data.Close), np.nan)
@@ -83,10 +92,13 @@ class WeightedStrat(Strategy):
   
     def next(self):
         price = self.data.Close[-1]
-        #low = self.data.Low[-1]
-        #high = self.data.High[-1]
-        #open = self.data.Open[-1]
+        low = self.data.Low[-1]
+        high = self.data.High[-1]
+        open = self.data.Open[-1]
+        volume = self.data.Volume[-1]
         current_day = len(self.data.Close) - 1 # Day count starts at 34
+        average_volume = np.mean(self.data.Volume[-self.volume_avg_period:])
+        average_volume_short = np.mean(self.data.Volume[-self.volume_avg_period_short:])
 
         # Calculate weighted signals
         if crossover(self.rsi_daily, self.rsi_lower_bound):
@@ -94,41 +106,36 @@ class WeightedStrat(Strategy):
         elif crossover(self.rsi_upper_bound, self.rsi_daily):
             rsi_daily_signal = -1
         else: rsi_daily_signal = 0
-        
-        """
-        if crossover(self.rsi_weekly, self.rsi_lower_bound):
-            rsi_weekly_signal = 1 
-        elif crossover(self.rsi_upper_bound, self.rsi_weekly):
-            rsi_weekly_signal = -1
-        else: rsi_weekly_signal = 0
-        """
-        
+
         if crossover(self.macd, self.signal):
             macd_signal = 1 
         elif crossover(self.signal, self.macd):
             macd_signal = -1
         else: macd_signal = 0
         
-        if price < self.bb_lower[-1]:
+        if low < self.bb_lower[-1]:
             bb_signal = 1 
-        elif price > self.bb_upper[-1]:
+        elif high > self.bb_upper[-1]:
             bb_signal = -1
         else: bb_signal = 0
         #    bb_signal = 1 - 2 * ((price - self.bb_lower[-1]) / (self.bb_upper[-1] - self.bb_lower[-1]))
         
-        # Daily candlestick crossing 3 EMA lines
+        # Daily candlestick crossing 3 EMA lines with enlarged volume
         if (min(self.data.Close[-2], self.data.Open[-1]) < min(self.ema5, self.ema10, self.ema20) and
             self.data.Close[-1] > max(self.ema5, self.ema10, self.ema20) and
-            self.data.Close[-1] > self.data.Open[-2]
+            self.data.Close[-1] > self.data.Open[-2] and
+            volume / average_volume > self.volume_ratio_threshold
             ):
             ema_cross_signal = 1 
         elif (max(self.data.Close[-2], self.data.Open[-1]) > max(self.ema5, self.ema10, self.ema20) and
             self.data.Close[-1] < min(self.ema5, self.ema10, self.ema20) and
-            self.data.Close[-1] < self.data.Open[-2]
+            self.data.Close[-1] < self.data.Open[-2] and
+            volume / average_volume > self.volume_ratio_threshold
             ):
             ema_cross_signal = -1
         else: ema_cross_signal = 0
         
+        # ADX signal - strong trend
         if self.adx[-1] > self.adx_threshold:
             if self.plus_di[-1] > self.minus_di[-1]:
                 adx_signal = 1  # Strong upward trend
@@ -137,24 +144,55 @@ class WeightedStrat(Strategy):
         else:
             adx_signal = 0  # Weak trend
         
+        # Price momentum signal - 3 consecutive days of directional movement with enlarged volume
+        if (self.data.Close[-1] > self.data.Open[-1] and
+            self.data.Close[-3] > self.data.Open[-3] and
+            self.data.Close[-1] > self.data.Close[-3] and
+            self.data.Open[-1] > self.data.Open[-3] and
+            max(self.data.Volume[-1], self.data.Volume[-2], self.data.Volume[-3]) / average_volume_short > self.volume_ratio_threshold):
+            price_mmt_signal = 1
+        elif (self.data.Close[-1] < self.data.Open[-1] and
+              self.data.Close[-3] < self.data.Open[-3] and
+              self.data.Close[-1] < self.data.Close[-3] and
+              self.data.Open[-1] < self.data.Open[-3] and
+              max(self.data.Volume[-1], self.data.Volume[-2], self.data.Volume[-3]) / average_volume_short > self.volume_ratio_threshold):
+            price_mmt_signal = -1
+        else:
+            price_mmt_signal = 0
+
+        # Extreme reversal signal - top / bottom with extra enlarged volume
+        if (self.data.Close[-1] > self.data.Open[-1] and
+            self.data.Close[-1] < self.ema5 and
+            self.data.Volume[-1] / average_volume > self.Volume_ratio_threshold_high):
+            extreme_reversal_signal = 1
+        elif (self.data.Close[-1] < self.data.Open[-1] and
+              self.data.Close[-1] > self.ema5 and
+              self.data.Volume[-1] / average_volume > self.Volume_ratio_threshold_high):
+            extreme_reversal_signal = -1
+        else: extreme_reversal_signal = 0
+        
         # Store signals in lists
         self.rsi_daily_signals.append(rsi_daily_signal)
-        #self.rsi_weekly_signals.append(rsi_weekly_signal)
         self.macd_signals.append(macd_signal)
         self.bb_signals.append(bb_signal)
+        self.ema_cross_signals.append(ema_cross_signal)
         self.adx_signals.append(adx_signal)
+        self.price_mmt_signals.append(price_mmt_signal)
         
         # Keep only the last `signal_window` signals
         if len(self.rsi_daily_signals) > self.signal_window:
             self.rsi_daily_signals.pop(0)
-        #if len(self.rsi_weekly_signals) > self.signal_window:
-        #    self.rsi_weekly_signals.pop(0)
         if len(self.macd_signals) > self.signal_window:
             self.macd_signals.pop(0)
         if len(self.bb_signals) > self.signal_window:
             self.bb_signals.pop(0)
+        if len(self.ema_cross_signals) > self.signal_window_short:
+            self.ema_cross_signals.pop(0)
         if len(self.adx_signals) > self.signal_window:
             self.adx_signals.pop(0)
+        if len(self.price_mmt_signals) > self.signal_window_short:
+            self.price_mmt_signals.pop(0)
+
             
         # Check if price is above or below the middle line of Bollinger Bands
         if price > self.bb_middle[-1]:
@@ -182,39 +220,46 @@ class WeightedStrat(Strategy):
         else:
             bb_reversal_signal = 0
 
+
         # Calculate total weighted signal value over the lookback period
         buy_signal = (
             np.max(self.rsi_daily_signals) * self.rsi_daily_weight_buy +
-            #np.max(self.rsi_weekly_signals) * self.rsi_weekly_weight +
             np.max(self.macd_signals) * self.macd_weight +
             np.max(self.bb_signals) * self.bb_weight_buy +
             bb_reversal_signal * self.bb_reversal_weight_buy +
-            ema_cross_signal * self.ema_cross_weight +
-            np.max(self.adx_signals) * self.adx_weight 
+            np.max(self.ema_cross_signals) * self.ema_cross_weight +
+            np.max(self.adx_signals) * self.adx_weight +
+            np.max(self.price_mmt_signals) * self.price_mmt_weight +
+            extreme_reversal_signal * self.extreme_reversal_weight
         )
         
         sell_signal = (
             np.min(self.rsi_daily_signals) * self.rsi_daily_weight_sell +
-            #np.min(self.rsi_weekly_signals) * self.rsi_weekly_weight +
             np.min(self.macd_signals) * self.macd_weight +
             np.min(self.bb_signals) * self.bb_weight_buy +
             bb_reversal_signal * self.bb_reversal_weight_sell +
-            ema_cross_signal * self.ema_cross_weight +
-            np.min(self.adx_signals) * self.adx_weight
+            np.min(self.ema_cross_signals) * self.ema_cross_weight +
+            np.min(self.adx_signals) * self.adx_weight +
+            np.max(self.price_mmt_signals) * self.price_mmt_weight +
+            extreme_reversal_signal * self.extreme_reversal_weight
         )
         
         # Execute order if total weighted signal value exceeds the threshold
-        if buy_signal >= self.buy_threshold and not self.position.is_long:
-            self.buy(
-                #size=0.5, 
-                sl=0.95*price,
-            )
-
-        if sell_signal <= self.sell_threshold and self.position.is_long:
+        if (sell_signal <= self.sell_threshold 
+            and self.position.is_long
+            ):
             self.sell_price = price
             self.sell_day = current_day
             self.position.close()
             
+        if (buy_signal >= self.buy_threshold
+            and not self.position.is_long
+            ):
+            self.buy(
+                #size=0.5, 
+                sl=0.95*price,
+            )
+   
         """
         # Check for price recovery within the recovery timeframe
         if self.sell_price is not None and self.sell_day is not None:
