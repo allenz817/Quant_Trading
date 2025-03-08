@@ -84,9 +84,13 @@ class WeightedStrat(Strategy):
         
         # Register self-defined indicator for plotting
         self.bb_signal_values = np.full(len(self.data.Close), np.nan)
+        self.price_mmt_values = np.full(len(self.data.Close), np.nan)
+        self.ema_cross_values = np.full(len(self.data.Close), np.nan)
         self.buy_signal_values = np.full(len(self.data.Close), np.nan)
         self.sell_signal_values = np.full(len(self.data.Close), np.nan)
         self.I(lambda: self.bb_signal_values, name='BB Signal')
+        self.I(lambda: self.price_mmt_values, name='Price Momentum Signal')
+        self.I(lambda: self.ema_cross_values, name='EMA Cross Signal')
         self.I(lambda: self.buy_signal_values, name='Buy Signal')
         self.I(lambda: self.sell_signal_values, name='Sell Signal')
   
@@ -274,6 +278,8 @@ class WeightedStrat(Strategy):
         
         # Update self-defined values for plotting
         self.bb_signal_values[current_day] = bb_signal
+        self.price_mmt_values[current_day] = price_mmt_signal
+        self.ema_cross_values[current_day] = ema_cross_signal
         self.buy_signal_values[current_day] = buy_signal
         self.sell_signal_values[current_day] = sell_signal
 
