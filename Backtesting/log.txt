@@ -1,4 +1,4 @@
 TO DO:
 - use optimizer for weights
 - confirm MACD signal with RSI dropping below 50
-- revaluate BB reversal signal
+- add candlestick gap
