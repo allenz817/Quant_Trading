@@ -1,4 +1,4 @@
 TO DO:
 - use optimizer for weights
-- add moving average crossover strat
 - confirm MACD signal with RSI dropping below 50
+- revaluate BB reversal signal
