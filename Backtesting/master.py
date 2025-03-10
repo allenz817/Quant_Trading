@@ -8,7 +8,7 @@ import talib as ta
 class WeightedStrat(Strategy):
     # Define parameters and weights for each signal
     rsi_daily_days = 7
-    rsi_upper_bound = 80
+    rsi_upper_bound = 75
     rsi_lower_bound = 25
     fast_period = 12
     slow_period = 26
@@ -49,7 +49,7 @@ class WeightedStrat(Strategy):
     buy_threshold = 1.0  # Threshold for executing buy orders
     sell_threshold = -1.0  # Threshold for executing sell orders
     adx_threshold = 25
-    volume_ratio_threshold = 1.5
+    volume_ratio_threshold = 1.25
     Volume_ratio_threshold_high = 1.75
     
 
@@ -114,9 +114,13 @@ class WeightedStrat(Strategy):
         else: return 0
         
     def eval_macd(self):
-        if crossover(self.macd, self.signal):
+        if (crossover(self.macd, self.signal) and
+            30 < self.rsi_daily[-1] < 70 # Filter out false signals when price exhibits extreme momentum
+            ):
             return 1 
-        elif crossover(self.signal, self.macd):
+        elif (crossover(self.signal, self.macd) and 
+              30 < self.rsi_daily[-1] < 70 # Filter out false signals when price exhibits extreme momentum
+              ):
             return -1
         else: return 0
     
@@ -162,38 +166,49 @@ class WeightedStrat(Strategy):
             return 0
         
     def eval_ema_cross(self, price, volume, average_volume):
-        # 1- Short term crossing
-        if (min(self.data.Close[-2], self.data.Open[-1]) < min(self.ema5, self.ema10, self.ema20) and
-            self.data.Close[-1] > max(self.ema5, self.ema10, self.ema20) and
+        # 1- Price crossing 3 EMA lines
+        if (min(self.data.Close[-2], self.data.Open[-1]) < min(self.ema5[-1], self.ema10[-1], self.ema20[-1]) and
+            self.data.Close[-1] > max(self.ema5[-1], self.ema10[-1], self.ema20[-1]) and
             self.data.Close[-1] > self.data.Open[-2] and
-            volume / average_volume > self.volume_ratio_threshold
+            volume / average_volume > 1
             ):
             ema_cross_signal_1 = 1 
-        elif (max(self.data.Close[-2], self.data.Open[-1]) > max(self.ema5, self.ema10, self.ema20) and
-            self.data.Close[-1] < min(self.ema5, self.ema10, self.ema20) and
+        elif (max(self.data.Close[-2], self.data.Open[-1]) > max(self.ema5[-1], self.ema10[-1], self.ema20[-1]) and
+            self.data.Close[-1] < min(self.ema5[-1], self.ema10[-1], self.ema20[-1]) and
             self.data.Close[-1] < self.data.Open[-2] and
-            volume / average_volume > self.volume_ratio_threshold
+            volume / average_volume > 1
             ):
             ema_cross_signal_1 = -1
         else: ema_cross_signal_1 = 0
+          
+        # 2- 3 EMA lines crossing
+        if (self.ema5[-1] > self.ema10[-1] > self.ema20[-1] and
+            self.ema5[-10] < self.ema10[-10] < self.ema20[-10] 
+            ):
+            ema_cross_signal_2 = 1
+        elif (self.ema5[-1] < self.ema10[-1] < self.ema20[-1] and
+              self.ema5[-10] > self.ema10[-10] > self.ema20[-10]
+              ):
+            ema_cross_signal_2 = -1
+        else: ema_cross_signal_2 = 0
         
-        # 2- Long term crossing
+        # 3- Long term crossing
         if (crossover(price, self.ema60)
             #or crossover(price, self.ema200)
             #or crossover(self.ema60, self.ema200)
             and volume / average_volume > self.volume_ratio_threshold
             ):
-            ema_cross_signal_2 = 1
+            ema_cross_signal_3 = 1
         elif (crossover(self.ema60, price)
               #or crossover(self.ema200, price)
               #or crossover(self.ema200, self.ema60)
               and volume / average_volume > self.volume_ratio_threshold
               ):
-            ema_cross_signal_2 = -1
-        else: ema_cross_signal_2 = 0
+            ema_cross_signal_3 = -1
+        else: ema_cross_signal_3 = 0
         
         # Combine short and long term signals
-        return ema_cross_signal_1 + ema_cross_signal_2
+        return ema_cross_signal_1 + ema_cross_signal_2 + ema_cross_signal_3
     
     def eval_adx(self):
         if self.adx[-1] > self.adx_threshold:
@@ -210,16 +225,37 @@ class WeightedStrat(Strategy):
             self.data.Close[-3] > self.data.Open[-3] and
             self.data.Close[-1] > self.data.Close[-3] and
             self.data.Open[-1] > self.data.Open[-3] and
-            max(self.data.Volume[-1], self.data.Volume[-2], self.data.Volume[-3]) / average_volume_short > self.volume_ratio_threshold):
-            return 1
+            max(self.data.Volume[-1], self.data.Volume[-2], self.data.Volume[-3]) / average_volume_short > self.volume_ratio_threshold
+            and self.data.Close[-1] > self.bb_middle[-1]
+            ):
+            price_mmt_signal_1 = 1
         elif (self.data.Close[-1] < self.data.Open[-1] and
               self.data.Close[-3] < self.data.Open[-3] and
               self.data.Close[-1] < self.data.Close[-3] and
               self.data.Open[-1] < self.data.Open[-3] and
-              max(self.data.Volume[-1], self.data.Volume[-2], self.data.Volume[-3]) / average_volume_short > self.volume_ratio_threshold):
-            return -1
+              max(self.data.Volume[-1], self.data.Volume[-2], self.data.Volume[-3]) / average_volume_short > self.volume_ratio_threshold
+              and self.data.Close[-1] < self.bb_middle[-1]
+              ):
+            price_mmt_signal_1 = -1
         else:
-            return 0
+            price_mmt_signal_1 = 0
+        
+        # Candlestick gap
+        if (self.data.Close[-1] > self.data.Open[-1] and
+            self.data.Low[-1] > self.data.High[-2] and
+            self.data.Volume[-1] / average_volume_short > self.volume_ratio_threshold
+            ):
+            price_mmt_signal_2 = 1
+        elif (self.data.Close[-1] < self.data.Open[-1] and
+              self.data.High[-1] < self.data.Low[-2] and
+              self.data.Volume[-1] / average_volume_short > self.volume_ratio_threshold
+              ):
+            price_mmt_signal_2 = -1
+        else:
+            price_mmt_signal_2 = 0
+        
+        return price_mmt_signal_1 + price_mmt_signal_2
+        
         
     def eval_extreme_reversal(self, average_volume):
         # Extreme reversal signal - top / bottom with enlarged volume
@@ -347,7 +383,7 @@ class WeightedStrat(Strategy):
 
 # BACKTESTING
 # Get financial data from yfinance
-ticker = 'QQQ' 
+ticker = 'SPY' 
 stock = yf.download(ticker, start='2022-09-30', end='2024-12-31')[['Open', 'High', 'Low', 'Close', 'Volume']]
 # reshape multi-index columns
 stock.columns = stock.columns.droplevel(1) 
