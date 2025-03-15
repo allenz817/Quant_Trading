@@ -5,6 +5,15 @@ import pandas as pd
 import numpy as np
 import talib as ta
 
+class Math():
+    @staticmethod
+    def sigmoid(x):
+        return 1 / (1 + np.exp(-x))
+    
+    @staticmethod
+    def custom_sigmoid(x):
+        return Math.sigmoid(x) * 2 - 1
+    
 class WeightedStrat(Strategy):
     # Define parameters and weights for each signal
     rsi_daily_days = 7
@@ -107,36 +116,59 @@ class WeightedStrat(Strategy):
     
     # SIGNAL EVALUATION FUNCTIONS
     def eval_rsi_daily(self):
+        """
+        scaled_rsi = (self.rsi_daily[-1] - 50) / 10
+        return Math.custom_sigmoid(scaled_rsi)
+        """
         if crossover(self.rsi_daily, self.rsi_lower_bound):
             return 1 
         elif crossover(self.rsi_upper_bound, self.rsi_daily):
             return -1
         else: return 0
         
+        
     def eval_macd(self):
+        # 1- MACD crossover
         if (crossover(self.macd, self.signal) and
             30 < self.rsi_daily[-1] < 70 # Filter out false signals when price exhibits extreme momentum
             ):
-            return 1 
+            macd_signal_1 = 1 
         elif (crossover(self.signal, self.macd) and 
               30 < self.rsi_daily[-1] < 70 # Filter out false signals when price exhibits extreme momentum
               ):
-            return -1
-        else: return 0
+            macd_signal_1 = -1
+        else: macd_signal_1 = 0
+        
+        return macd_signal_1
     
     def eval_bb(self, volume, average_volume):
+        # 1-Bollinger Band support / resistance
         if (self.data.Close[-2] < self.bb_lower[-2] 
             and self.data.Close[-1] > self.bb_lower[-1]
-            and volume / average_volume > self.volume_ratio_threshold
+            and self.data.Volume[-1] > self.data.Volume[-2]
             ):
-            return 1 
+            bb_signal_1 = 1 
         elif (self.data.Close[-2] > self.bb_upper[-2]
               and self.data.Close[-1] < self.bb_upper[-1]
-              and volume / average_volume > self.volume_ratio_threshold
+              and self.data.Volume[-1] > self.data.Volume[-2]
               ):
-            return -1
-        else: return 0
-        #    return 1 - 2 * ((price - self.bb_lower[-1]) / (self.bb_upper[-1] - self.bb_lower[-1]))
+            bb_signal_1 = -1
+        else: bb_signal_1 = 0
+        
+        # 2-Bollinger Band breakout
+        if (self.data.Close[-2] > self.bb_upper[-2]
+              and self.data.Close[-1] > self.bb_upper[-1]
+              and np.mean(self.data.Volume[-2:]) / average_volume > self.volume_ratio_threshold
+              ):
+            bb_signal_2 = 1
+        elif (self.data.Close[-2] < self.bb_lower[-2] 
+            and self.data.Close[-1] < self.bb_lower[-1]
+            and np.mean(self.data.Volume[-2:]) / average_volume > self.volume_ratio_threshold
+            ):
+            bb_signal_2 = -1
+        else: bb_signal_2 = 0
+        
+        return bb_signal_1 + bb_signal_2
     
     def eval_bb_reversal(self, price):
         # Check if price is above or below the middle line of Bollinger Bands
@@ -311,7 +343,7 @@ class WeightedStrat(Strategy):
             self.bb_signals.pop(0)
         if len(self.ema_cross_signals) > self.signal_window_short:
             self.ema_cross_signals.pop(0)
-        if len(self.adx_signals) > self.signal_window:
+        if len(self.adx_signals) > self.signal_window_short:
             self.adx_signals.pop(0)
         if len(self.price_mmt_signals) > self.signal_window_short:
             self.price_mmt_signals.pop(0)
@@ -383,8 +415,8 @@ class WeightedStrat(Strategy):
 
 # BACKTESTING
 # Get financial data from yfinance
-ticker = 'SPY' 
-stock = yf.download(ticker, start='2022-09-30', end='2024-12-31')[['Open', 'High', 'Low', 'Close', 'Volume']]
+ticker = 'META' 
+stock = yf.download(ticker, start='2023-01-01', end='2025-03-10')[['Open', 'High', 'Low', 'Close', 'Volume']]
 # reshape multi-index columns
 stock.columns = stock.columns.droplevel(1) 
 
