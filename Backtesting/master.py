@@ -4,18 +4,11 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 import talib as ta
+from math_func import Math
 
-class Math():
-    @staticmethod
-    def sigmoid(x):
-        return 1 / (1 + np.exp(-x))
-    
-    @staticmethod
-    def custom_sigmoid(x):
-        return Math.sigmoid(x) * 2 - 1
-    
+
 class WeightedStrat(Strategy):
-    # Define parameters and weights for each signal
+    # Define parameters and weights for each signal 
     rsi_daily_days = 7
     rsi_upper_bound = 75
     rsi_lower_bound = 25
@@ -64,6 +57,7 @@ class WeightedStrat(Strategy):
 
     def init(self):
         close = self.data.Close
+        # Calculate daily indicators
         self.rsi_daily = self.I(ta.RSI, close, self.rsi_daily_days)
         self.macd, self.signal, _ = self.I(ta.MACD, close, self.fast_period, self.slow_period, self.signal_period)
         self.bb_upper, self.bb_middle, self.bb_lower = self.I(ta.BBANDS, close, self.bb_period, self.bb_stdev)
@@ -75,13 +69,7 @@ class WeightedStrat(Strategy):
         self.adx = self.I(ta.ADX, self.data.High, self.data.Low, close, self.adx_period)
         self.plus_di = self.I(ta.PLUS_DI, self.data.High, self.data.Low, close, self.adx_period)  # Initialize +DI
         self.minus_di = self.I(ta.MINUS_DI, self.data.High, self.data.Low, close, self.adx_period)  # Initialize -DI
-  
-        """
-        # Calculate weekly RSI
-        weekly_close = resample_apply('W-FRI', ta.RSI, close, self.rsi_daily_days)
-        self.rsi_weekly = self.I(lambda: weekly_close, name='Weekly RSI')
-        """
-        
+
         self.rsi_daily_signals = []
         self.macd_signals = []
         self.bb_signals = []
@@ -113,7 +101,12 @@ class WeightedStrat(Strategy):
         self.I(lambda: self.extreme_reversal_values, name='Extreme Reversal Signal')
         self.I(lambda: self.buy_signal_values, name='Buy Signal')
         self.I(lambda: self.sell_signal_values, name='Sell Signal')
-    
+        
+        # Calculate weekly indicators
+        #"""
+        self.rsi_weekly = resample_apply('W-FRI', ta.RSI, close, self.rsi_daily_days)
+        self.macd_weekly, self.signal_weekly, _ = resample_apply('W-FRI', ta.MACD, close, self.fast_period, self.slow_period, self.signal_period)
+
     # SIGNAL EVALUATION FUNCTIONS
     def eval_rsi_daily(self):
         """
@@ -311,12 +304,14 @@ class WeightedStrat(Strategy):
         mid = (open + price) / 2
         volume = self.data.Volume[-1]
         current_day = len(self.data.Close) - 1 # Day count starts at 34
+        print(current_day)
         average_volume = np.mean(self.data.Volume[-self.volume_avg_period:])
         average_volume_short = np.mean(self.data.Volume[-self.volume_avg_period_short:])
 
         
         # Call function to evaluate signals
         rsi_daily_signal = self.eval_rsi_daily()
+        #print(rsi_daily_signal)
         macd_signal = self.eval_macd()
         bb_signal = self.eval_bb(volume, average_volume)
         bb_reversal_signal = self.eval_bb_reversal(price)
@@ -327,6 +322,7 @@ class WeightedStrat(Strategy):
         
         # Store signals in lists
         self.rsi_daily_signals.append(rsi_daily_signal)
+        print(f"RSI Daily Signal: {rsi_daily_signal}, Length: {len(self.rsi_daily_signals)}")
         self.macd_signals.append(macd_signal)
         self.bb_signals.append(bb_signal)
         self.ema_cross_signals.append(ema_cross_signal)
