@@ -9,9 +9,9 @@ from math_func import Math
 
 class WeightedStrat(Strategy):
     # Define parameters and weights for each signal 
-    rsi_daily_days = 7
-    rsi_upper_bound = 75
-    rsi_lower_bound = 25
+    rsi_daily_days = 14
+    rsi_upper_bound = 70
+    rsi_lower_bound = 30
     fast_period = 12
     slow_period = 26
     signal_period = 9
@@ -66,16 +66,16 @@ class WeightedStrat(Strategy):
         self.ema10 = self.I(ta.EMA, close, self.ema10_period)
         self.ema20 = self.I(ta.EMA, close, self.ema20_period)
         self.ema60 = self.I(ta.EMA, close, 60)
-        #self.ema200 = self.I(ta.EMA, close, 200)
+        self.ema250 = self.I(ta.EMA, close, 250)
         self.adx = self.I(ta.ADX, self.data.High, self.data.Low, close, self.adx_period)
         self.plus_di = self.I(ta.PLUS_DI, self.data.High, self.data.Low, close, self.adx_period)  # Initialize +DI
         self.minus_di = self.I(ta.MINUS_DI, self.data.High, self.data.Low, close, self.adx_period)  # Initialize -DI
 
-        """
+        
         # Calculate weekly indicators
         self.rsi_weekly = resample_apply('W-FRI', ta.RSI, close, self.rsi_daily_days)
         self.macd_weekly, self.signal_weekly, _ = resample_apply('W-FRI', ta.MACD, close, self.fast_period, self.slow_period, self.signal_period)
-        """
+        
         # Initialize signal storage
         self.signals = {
             'rsi_daily': [],
@@ -417,8 +417,8 @@ class WeightedStrat(Strategy):
 
 # BACKTESTING
 # Get financial data from yfinance
-ticker = 'META' 
-stock = yf.download(ticker, start='2023-01-01', end='2025-03-15')[['Open', 'High', 'Low', 'Close', 'Volume']]
+ticker = 'QQQ' 
+stock = yf.download(ticker, start='2020-01-01', end='2025-03-15')[['Open', 'High', 'Low', 'Close', 'Volume']]
 # reshape multi-index columns
 stock.columns = stock.columns.droplevel(1) 
 

@@ -1,3 +1,4 @@
 TO DO:
 - use optimizer for weights
 - create a separate opportunistic trade or increase sensitivity
+- add weekly indicators
