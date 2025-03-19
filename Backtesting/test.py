@@ -68,7 +68,7 @@ class WeightedStrat(Strategy):
         self.ema10 = self.I(ta.EMA, close, self.ema10_period)
         self.ema20 = self.I(ta.EMA, close, self.ema20_period)
         self.ema60 = self.I(ta.EMA, close, 60)
-        self.ema250 = self.I(ta.EMA, close, 250)
+        self.ema120 = self.I(ta.EMA, close, 120)
         self.adx = self.I(ta.ADX, self.data.High, self.data.Low, close, self.adx_period)
         self.plus_di = self.I(ta.PLUS_DI, self.data.High, self.data.Low, close, self.adx_period)  # Initialize +DI
         self.minus_di = self.I(ta.MINUS_DI, self.data.High, self.data.Low, close, self.adx_period)  # Initialize -DI
@@ -147,12 +147,14 @@ class WeightedStrat(Strategy):
         return macd_signal_1
     
     def eval_bb(self, volume, average_volume):
-        # 1-Bollinger Band support / resistance
+        # 1
+        # Bollinger Band support 
         if (self.data.Close[-2] < self.bb_lower[-2] 
             and self.data.Close[-1] > self.bb_lower[-1]
             and max(self.data.Volume[-1], self.data.Volume[-2]) / average_volume > self.volume_ratio_threshold
             ):
             bb_signal_1 = 1 
+        # Bollinger Band resistance
         elif (self.data.Close[-2] > self.bb_upper[-2]
               and self.data.Close[-1] < self.bb_upper[-1]
               and max(self.data.Volume[-1], self.data.Volume[-2]) / average_volume > self.volume_ratio_threshold
@@ -160,12 +162,14 @@ class WeightedStrat(Strategy):
             bb_signal_1 = -1
         else: bb_signal_1 = 0
         
-        # 2-Bollinger Band breakout
+        # 2
+        # Bollinger Band upper breakout
         if (self.data.Close[-2] > self.bb_upper[-2]
               and self.data.Close[-1] > self.bb_upper[-1]
               and np.mean(self.data.Volume[-2:]) / average_volume > self.volume_ratio_threshold
               ):
             bb_signal_2 = 1
+        # Bollinger Band lower breakout
         elif (self.data.Close[-2] < self.bb_lower[-2] 
             and self.data.Close[-1] < self.bb_lower[-1]
             and np.mean(self.data.Volume[-2:]) / average_volume > self.volume_ratio_threshold
@@ -326,14 +330,18 @@ class WeightedStrat(Strategy):
         if (self.data.Close[-1] > self.data.Open[-1] and  # Current candle is green
             (self.data.High[-1] - self.data.Low[-1]) > 3 * (self.data.Open[-1] - self.data.Close[-1]) and  # Long lower shadow
             (self.data.Close[-1] - self.data.Low[-1]) / (.001 + self.data.High[-1] - self.data.Low[-1]) > 0.6 and  # Close is near the high
-            (self.data.Open[-1] - self.data.Low[-1]) / (.001 + self.data.High[-1] - self.data.Low[-1]) > 0.6):  # Open is near the high
+            (self.data.Open[-1] - self.data.Low[-1]) / (.001 + self.data.High[-1] - self.data.Low[-1]) > 0.6 # Open is near the high
+            and self.data.Close[-1] < np.mean(self.data.Close[-3:])
+            ):  
             kstick_signal += 1
 
         # Shooting Star
         if (self.data.Close[-1] < self.data.Open[-1] and  # Current candle is red
             (self.data.High[-1] - self.data.Low[-1]) > 3 * (self.data.Close[-1] - self.data.Open[-1]) and  # Long upper shadow
             (self.data.High[-1] - self.data.Close[-1]) / (.001 + self.data.High[-1] - self.data.Low[-1]) > 0.6 and  # Close is near the low
-            (self.data.High[-1] - self.data.Open[-1]) / (.001 + self.data.High[-1] - self.data.Low[-1]) > 0.6):  # Open is near the low
+            (self.data.High[-1] - self.data.Open[-1]) / (.001 + self.data.High[-1] - self.data.Low[-1]) > 0.6 # Open is near the low
+            and self.data.Close[-1] > np.mean(self.data.Close[-3:])
+            ):  
             kstick_signal -= 1
 
         return kstick_signal
