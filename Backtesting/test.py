@@ -33,7 +33,8 @@ class WeightedStrat(Strategy):
     rsi_daily_weight_sell = 0.25
     rsi_weekly_weight = 0
     # 2-MACD
-    macd_weight = 0.5
+    macd_daily_weight = 0.5
+    macd_weekly_weight = 0
     # 3-Bollinger Bands
     bb_weight_buy = 0.5
     bb_weight_sell = 0.25
@@ -81,7 +82,9 @@ class WeightedStrat(Strategy):
         # Initialize signal storage
         self.signals = {
             'rsi_daily': [],
-            'macd': [],
+            'rsi_weekly': [],
+            'macd_daily': [],
+            'macd_weekly': [],
             'bb': [],
             'ema_cross': [],
             'adx': [],
@@ -96,7 +99,9 @@ class WeightedStrat(Strategy):
         data_length = len(self.data.Close)
         self.signal_values = {
             'rsi_daily': np.full(data_length, np.nan),
-            'macd': np.full(data_length, np.nan),
+            'rsi_weekly': np.full(data_length, np.nan),
+            'macd_daily': np.full(data_length, np.nan),
+            'macd_weekly': np.full(data_length, np.nan),
             'adx': np.full(data_length, np.nan),
             'bb': np.full(data_length, np.nan),
             'price_mmt': np.full(data_length, np.nan),
@@ -107,7 +112,9 @@ class WeightedStrat(Strategy):
             'sell': np.full(data_length, np.nan)
         }
         self.I(lambda: self.signal_values['rsi_daily'], name='RSI Daily Signal')
-        self.I(lambda: self.signal_values['macd'], name='MACD Signal')
+        self.I(lambda: self.signal_values['rsi_weekly'], name='RSI Weekly Signal')
+        self.I(lambda: self.signal_values['macd_daily'], name='MACD Signal')
+        self.I(lambda: self.signal_values['macd_weekly'], name='MACD Weekly Signal')
         self.I(lambda: self.signal_values['adx'], name='ADX Signal')
         self.I(lambda: self.signal_values['bb'], name='BB Signal')
         self.I(lambda: self.signal_values['price_mmt'], name='Price Momentum Signal')
@@ -131,8 +138,14 @@ class WeightedStrat(Strategy):
             return -1
         else: return 0
         
+    def eval_rsi_weekly(self):
+        if crossover(self.rsi_weekly, self.rsi_lower_bound):
+            return 1 
+        elif crossover(self.rsi_upper_bound, self.rsi_weekly):
+            return -1
+        else: return 0
         
-    def eval_macd(self):
+    def eval_macd_daily(self):
         # 1- MACD crossover
         if (crossover(self.macd, self.signal) and
             30 < self.rsi_daily[-1] < 70 # Filter out false signals when price exhibits extreme momentum
@@ -140,6 +153,18 @@ class WeightedStrat(Strategy):
             macd_signal_1 = 1 
         elif (crossover(self.signal, self.macd) and 
               30 < self.rsi_daily[-1] < 70 # Filter out false signals when price exhibits extreme momentum
+              ):
+            macd_signal_1 = -1
+        else: macd_signal_1 = 0
+        
+        return macd_signal_1
+    
+    def eval_macd_weekly(self):
+        # 1- MACD crossover
+        if (crossover(self.macd_weekly, self.signal_weekly)
+            ):
+            macd_signal_1 = 1 
+        elif (crossover(self.signal_weekly, self.macd_weekly)
               ):
             macd_signal_1 = -1
         else: macd_signal_1 = 0
@@ -362,7 +387,9 @@ class WeightedStrat(Strategy):
 
         # Call function to evaluate signals
         rsi_daily_signal = self.eval_rsi_daily()
-        macd_signal = self.eval_macd()
+        rsi_weekly_signal = self.eval_rsi_weekly()
+        macd_daily_signal = self.eval_macd_daily()
+        macd_weekly_signal = self.eval_macd_weekly()
         bb_signal = self.eval_bb(volume, average_volume)
         #bb_reversal_signal = self.eval_bb_reversal(price)
         ema_cross_signal = self.eval_ema_cross(price, volume, average_volume)
@@ -373,7 +400,9 @@ class WeightedStrat(Strategy):
 
         # Store signals in lists
         self.signals['rsi_daily'].append(rsi_daily_signal)
-        self.signals['macd'].append(macd_signal)
+        self.signals['rsi_weekly'].append(rsi_weekly_signal)
+        self.signals['macd_daily'].append(macd_daily_signal)
+        self.signals['macd_weekly'].append(macd_weekly_signal)
         self.signals['bb'].append(bb_signal)
         self.signals['ema_cross'].append(ema_cross_signal)
         self.signals['adx'].append(adx_signal)
@@ -384,8 +413,12 @@ class WeightedStrat(Strategy):
         # Keep only the last `signal_window` signals
         if len(self.signals['rsi_daily']) > self.signal_window:
             self.signals['rsi_daily'].pop(0)
-        if len(self.signals['macd']) > self.signal_window:
-            self.signals['macd'].pop(0)
+        if len(self.signals['rsi_weekly']) > self.signal_window:
+            self.signals['rsi_weekly'].pop(0)
+        if len(self.signals['macd_daily']) > self.signal_window:
+            self.signals['macd_daily'].pop(0)
+        if len(self.signals['macd_weekly']) > self.signal_window:
+            self.signals['macd_weekly'].pop(0)
         if len(self.signals['bb']) > self.signal_window_short:
             self.signals['bb'].pop(0)
         if len(self.signals['ema_cross']) > self.signal_window_short:
@@ -402,7 +435,9 @@ class WeightedStrat(Strategy):
         # Calculate total weighted signal value over the lookback period
         buy_signal = (
             np.max(self.signals['rsi_daily']) * self.rsi_daily_weight_buy +
-            np.max(self.signals['macd']) * self.macd_weight +
+            np.max(self.signals['rsi_weekly']) * self.rsi_weekly_weight +
+            np.max(self.signals['macd_daily']) * self.macd_daily_weight +
+            np.max(self.signals['macd_weekly']) * self.macd_weekly_weight +
             np.max(self.signals['bb']) * self.bb_weight_buy +
             #bb_reversal_signal * self.bb_reversal_weight_buy +
             np.max(self.signals['ema_cross']) * self.ema_cross_weight +
@@ -414,7 +449,9 @@ class WeightedStrat(Strategy):
         
         sell_signal = (
             np.min(self.signals['rsi_daily']) * self.rsi_daily_weight_sell +
-            np.min(self.signals['macd']) * self.macd_weight +
+            np.min(self.signals['rsi_weekly']) * self.rsi_weekly_weight +
+            np.min(self.signals['macd_daily']) * self.macd_daily_weight +
+            np.min(self.signals['macd_weekly']) * self.macd_weekly_weight +
             np.min(self.signals['bb']) * self.bb_weight_buy +
             #bb_reversal_signal * self.bb_reversal_weight_sell +
             np.min(self.signals['ema_cross']) * self.ema_cross_weight +
@@ -454,7 +491,9 @@ class WeightedStrat(Strategy):
         
         # Update self-defined values for plotting
         self.signal_values['rsi_daily'][current_day] = rsi_daily_signal
-        self.signal_values['macd'][current_day] = macd_signal
+        self.signal_values['rsi_weekly'][current_day] = rsi_weekly_signal
+        self.signal_values['macd_daily'][current_day] = macd_daily_signal
+        self.signal_values['macd_weekly'][current_day] = macd_weekly_signal
         self.signal_values['adx'][current_day] = adx_signal
         self.signal_values['bb'][current_day] = bb_signal
         self.signal_values['price_mmt'][current_day] = price_mmt_signal
