@@ -17,7 +17,7 @@ class WeightedStrat(Strategy):
     slow_period = 26
     signal_period = 9
     bb_period = 20
-    bb_stdev = 2
+    bb_stdev = 2.1
     ema5_period = 5 
     ema10_period = 10
     ema20_period = 20
@@ -47,8 +47,8 @@ class WeightedStrat(Strategy):
     adx_weight = 0.25
     # 6-Price Momentum
     price_mmt_weight = 0.25
-    # 7-Extreme Reversal
-    extreme_reversal_weight = 0.25
+    # 7-Null
+    
     # 8-Kstick
     kstick_weight = 0.25
     
@@ -90,7 +90,6 @@ class WeightedStrat(Strategy):
             'ema_cross': [],
             'adx': [],
             'price_mmt': [],
-            'extreme_reversal': [],
             'kstick': [],
             'buy': [],
             'sell': []
@@ -107,7 +106,6 @@ class WeightedStrat(Strategy):
             'bb': np.full(data_length, np.nan),
             'price_mmt': np.full(data_length, np.nan),
             'ema_cross': np.full(data_length, np.nan),
-            'extreme_reversal': np.full(data_length, np.nan),
             'kstick': np.full(data_length, np.nan),
             'buy': np.full(data_length, np.nan),
             'sell': np.full(data_length, np.nan)
@@ -120,7 +118,6 @@ class WeightedStrat(Strategy):
         self.I(lambda: self.signal_values['bb'], name='BB Signal')
         self.I(lambda: self.signal_values['price_mmt'], name='Price Momentum Signal')
         self.I(lambda: self.signal_values['ema_cross'], name='EMA Cross Signal')
-        self.I(lambda: self.signal_values['extreme_reversal'], name='Extreme Reversal Signal')
         self.I(lambda: self.signal_values['kstick'], name='Kstick Signal')
         self.I(lambda: self.signal_values['buy'], name='Buy Signal')
         self.I(lambda: self.signal_values['sell'], name='Sell Signal')
@@ -209,7 +206,21 @@ class WeightedStrat(Strategy):
             bb_signal_2 = -1
         else: bb_signal_2 = 0
         
-        return bb_signal_1 + bb_signal_2
+        # 3
+        # Extreme reversal signal - top / bottom with enlarged volume
+        if (self.data.Close[-2] < self.bb_lower[-2] and
+            (self.data.Close[-1] + self.data.Open[-1]) / 2 > (self.data.Close[-2] + self.data.Open[-2]) / 2 and
+            max(self.data.Volume[-1], self.data.Volume[-2]) / average_volume > self.Volume_ratio_threshold_high
+            ):
+            bb_signal_3 = 1
+        elif (self.data.Close[-2] > self.bb_upper[-2] and
+            (self.data.Close[-1] + self.data.Open[-1]) / 2 < (self.data.Close[-2] + self.data.Open[-2]) / 2 and
+              max(self.data.Volume[-1], self.data.Volume[-2]) / average_volume > self.Volume_ratio_threshold_high
+              ):
+            bb_signal_3 = -1
+        else: bb_signal_3 = 0
+        
+        return bb_signal_1 + bb_signal_2 + bb_signal_3
     
     def eval_bb_reversal(self, price):
         # Check if price is above or below the middle line of Bollinger Bands
@@ -328,19 +339,6 @@ class WeightedStrat(Strategy):
             price_mmt_signal_2 = 0
         
         return price_mmt_signal_1 + price_mmt_signal_2
-        
-        
-    def eval_extreme_reversal(self, average_volume):
-        # Extreme reversal signal - top / bottom with enlarged volume
-        if (self.data.Close[-3] < self.bb_lower[-3] and
-            (self.data.Close[-1] + self.data.Open[-1]) / 2 > (self.data.Close[-3] + self.data.Open[-3]) / 2 and
-            max(self.data.Volume[-1], self.data.Volume[-2], self.data.Volume[-3]) / average_volume > self.Volume_ratio_threshold_high):
-            return 1
-        elif (self.data.Close[-3] > self.bb_upper[-3] and
-            (self.data.Close[-1] + self.data.Open[-1]) / 2 < (self.data.Close[-3] + self.data.Open[-3]) / 2 and
-              max(self.data.Volume[-1], self.data.Volume[-2], self.data.Volume[-3]) / average_volume > self.Volume_ratio_threshold_high):
-            return -1
-        else: return 0
     
     def eval_kstick(self):
         kstick_signal = 0
@@ -348,14 +346,18 @@ class WeightedStrat(Strategy):
         if (self.data.Close[-2] < self.data.Open[-2] and  # Previous candle is red
             self.data.Close[-1] > self.data.Open[-1] and  # Current candle is green
             self.data.Close[-1] > self.data.Open[-2] and  # Current close is higher than previous open
-            self.data.Open[-1] < self.data.Close[-2]):    # Current open is lower than previous close
+            self.data.Open[-1] < self.data.Close[-2]    # Current open is lower than previous close
+            and self.data.Volume[-1] > self.data.Volume[-2]
+            ):
             kstick_signal += 1
 
         # Bearish Engulfing
         if (self.data.Close[-2] > self.data.Open[-2] and  # Previous candle is green
             self.data.Close[-1] < self.data.Open[-1] and  # Current candle is red
             self.data.Close[-1] < self.data.Open[-2] and  # Current close is lower than previous open
-            self.data.Open[-1] > self.data.Close[-2]):    # Current open is higher than previous close
+            self.data.Open[-1] > self.data.Close[-2]    # Current open is higher than previous close
+            and self.data.Volume[-1] > self.data.Volume[-2]
+            ):
             kstick_signal -= 1
 
         # Hammer
@@ -402,7 +404,6 @@ class WeightedStrat(Strategy):
         ema_cross_signal = self.eval_ema_cross(price, volume, average_volume)
         adx_signal = self.eval_adx()
         price_mmt_signal = self.eval_price_mmt(average_volume_short)
-        extreme_reversal_signal = self.eval_extreme_reversal(average_volume)
         kstick_signal = self.eval_kstick()
 
         # Store signals in lists
@@ -414,7 +415,6 @@ class WeightedStrat(Strategy):
         self.signals['ema_cross'].append(ema_cross_signal)
         self.signals['adx'].append(adx_signal)
         self.signals['price_mmt'].append(price_mmt_signal)
-        self.signals['extreme_reversal'].append(extreme_reversal_signal)
         self.signals['kstick'].append(kstick_signal)
 
         # Keep only the last `signal_window` signals
@@ -434,8 +434,6 @@ class WeightedStrat(Strategy):
             self.signals['adx'].pop(0)
         if len(self.signals['price_mmt']) > self.signal_window_short:
             self.signals['price_mmt'].pop(0)
-        if len(self.signals['extreme_reversal']) > self.signal_window:
-            self.signals['extreme_reversal'].pop(0)
         if len(self.signals['kstick']) > self.signal_window_short:
             self.signals['kstick'].pop(0)
 
@@ -450,7 +448,6 @@ class WeightedStrat(Strategy):
             np.max(self.signals['ema_cross']) * self.ema_cross_weight +
             np.max(self.signals['adx']) * self.adx_weight +
             np.max(self.signals['price_mmt']) * self.price_mmt_weight +
-            np.max(self.signals['extreme_reversal']) * self.extreme_reversal_weight +
             np.max(self.signals['kstick']) * self.kstick_weight
         )
         
@@ -464,7 +461,6 @@ class WeightedStrat(Strategy):
             np.min(self.signals['ema_cross']) * self.ema_cross_weight +
             np.min(self.signals['adx']) * self.adx_weight +
             np.min(self.signals['price_mmt']) * self.price_mmt_weight +
-            np.min(self.signals['extreme_reversal']) * self.extreme_reversal_weight +
             np.min(self.signals['kstick']) * self.kstick_weight
         )
         
@@ -505,7 +501,6 @@ class WeightedStrat(Strategy):
         self.signal_values['bb'][current_day] = bb_signal
         self.signal_values['price_mmt'][current_day] = price_mmt_signal
         self.signal_values['ema_cross'][current_day] = ema_cross_signal
-        self.signal_values['extreme_reversal'][current_day] = extreme_reversal_signal
         self.signal_values['kstick'][current_day] = kstick_signal
         self.signal_values['buy'][current_day] = buy_signal
         self.signal_values['sell'][current_day] = sell_signal
@@ -514,7 +509,7 @@ class WeightedStrat(Strategy):
 
 # BACKTESTING
 # Get financial data from yfinance
-ticker = 'QQQ' 
+ticker = 'SPY' 
 current_date = dt.datetime.now().date()
 end_date = current_date - dt.timedelta(days=1)
 stock = yf.download(ticker, start='2020-01-01', end=end_date)[['Open', 'High', 'Low', 'Close', 'Volume']]
