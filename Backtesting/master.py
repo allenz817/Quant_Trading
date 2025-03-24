@@ -66,6 +66,7 @@ class WeightedStrat(Strategy):
         self.rsi_daily = self.I(ta.RSI, close, self.rsi_daily_days)
         self.macd, self.signal, _ = self.I(ta.MACD, close, self.fast_period, self.slow_period, self.signal_period)
         self.bb_upper, self.bb_middle, self.bb_lower = self.I(ta.BBANDS, close, self.bb_period, self.bb_stdev)
+        self.bb_width = self.I(self.calc_bb_width)
         self.ema5 = self.I(ta.EMA, close, self.ema5_period)
         self.ema10 = self.I(ta.EMA, close, self.ema10_period)
         self.ema20 = self.I(ta.EMA, close, self.ema20_period)
@@ -124,6 +125,10 @@ class WeightedStrat(Strategy):
         
         #print(len(self.data.Close))
 
+    # CALCULATION FUNCTIONS
+    def calc_bb_width(self):
+        return self.bb_upper - self.bb_lower
+        
     # SIGNAL EVALUATION FUNCTIONS
     def eval_rsi_daily(self):
         """
@@ -220,7 +225,26 @@ class WeightedStrat(Strategy):
             bb_signal_3 = -1
         else: bb_signal_3 = 0
         
-        return bb_signal_1 + bb_signal_2 + bb_signal_3
+        # 4
+        # Bollinger Band Squeeze
+        if self.bb_width[-1] < np.percentile(self.bb_width, 20):  # Bands are in the lowest 20% of their width
+            if self.data.Close[-1] > self.bb_middle[-1]:
+                bb_signal_4 = 1  # Potential bullish breakout
+            elif self.data.Close[-1] < self.bb_middle[-1]:
+                bb_signal_4 = -1  # Potential bearish breakout
+        else: bb_signal_4 = 0
+        
+        # 5
+        # Bollinger Band Expansion
+        if self.bb_width[-1] > np.percentile(self.bb_width, 80):  # Bands are in the highest 20% of their width
+            if self.data.Close[-1] > self.bb_middle[-1]:
+                bb_signal_5 = 1  # Confirming bullish trend
+            elif self.data.Close[-1] < self.bb_middle[-1]:
+                bb_signal_5 = -1  # Confirming bearish trend
+        else: bb_signal_5 = 0
+        
+        return bb_signal_1 + bb_signal_2 + bb_signal_3 + bb_signal_4 + bb_signal_5
+    
     
     def eval_bb_reversal(self, price):
         # Check if price is above or below the middle line of Bollinger Bands

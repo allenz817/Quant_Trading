@@ -2,3 +2,4 @@ TO DO:
 - use optimizer for weights
 - create a separate opportunistic trade or increase sensitivity
 - update kstick signals
+- update bb width logics
