@@ -35,7 +35,7 @@ class WeightedStrat(Strategy):
     rsi_weekly_weight = 0
     # 2-MACD
     macd_daily_weight = 0.5
-    macd_weekly_weight = 0
+    macd_weekly_weight = 0.25
     # 3-Bollinger Bands
     bb_weight_buy = 0.5
     bb_weight_sell = 0.25
@@ -384,21 +384,21 @@ class WeightedStrat(Strategy):
             ):
             kstick_signal -= 1
 
-        # Hammer
-        if (self.data.Close[-1] > self.data.Open[-1] and  # Current candle is green
-            (self.data.High[-1] - self.data.Low[-1]) > 3 * (self.data.Open[-1] - self.data.Close[-1]) and  # Long lower shadow
-            (self.data.Close[-1] - self.data.Low[-1]) / (.001 + self.data.High[-1] - self.data.Low[-1]) > 0.6 and  # Close is near the high
-            (self.data.Open[-1] - self.data.Low[-1]) / (.001 + self.data.High[-1] - self.data.Low[-1]) > 0.6 # Open is near the high
-            and self.data.Close[-1] < np.mean(self.data.Close[-3:])
+        # Hammer / Inverted Hammer
+        if (self.data.Close[-1] > self.data.Open[-1] # Current candle is green
+            and (self.data.High[-1] - self.data.Low[-1]) > 2 * (self.data.Close[-1] - self.data.Open[-1]) # Long shadow
+            # and (self.data.Close[-1] - self.data.Low[-1]) / (.001 + self.data.High[-1] - self.data.Low[-1]) > 0.6  # Close is near the high
+            # and (self.data.Open[-1] - self.data.Low[-1]) / (.001 + self.data.High[-1] - self.data.Low[-1]) > 0.6 # Open is near the high
+            and self.data.Close[-1] < np.mean(self.data.Close[-3:]) # Following a downtrend
             ):  
             kstick_signal += 1
 
-        # Shooting Star
-        if (self.data.Close[-1] < self.data.Open[-1] and  # Current candle is red
-            (self.data.High[-1] - self.data.Low[-1]) > 3 * (self.data.Close[-1] - self.data.Open[-1]) and  # Long upper shadow
-            (self.data.High[-1] - self.data.Close[-1]) / (.001 + self.data.High[-1] - self.data.Low[-1]) > 0.6 and  # Close is near the low
-            (self.data.High[-1] - self.data.Open[-1]) / (.001 + self.data.High[-1] - self.data.Low[-1]) > 0.6 # Open is near the low
-            and self.data.Close[-1] > np.mean(self.data.Close[-3:])
+        # Hanging man / Shooting star
+        if (self.data.Close[-1] < self.data.Open[-1] # Current candle is red
+            and (self.data.High[-1] - self.data.Low[-1]) > 2 * (self.data.Open[-1] - self.data.Close[-1]) # Long shadow
+            # and (self.data.High[-1] - self.data.Close[-1]) / (.001 + self.data.High[-1] - self.data.Low[-1]) > 0.6  # Close is near the low
+            # and (self.data.High[-1] - self.data.Open[-1]) / (.001 + self.data.High[-1] - self.data.Low[-1]) > 0.6 # Open is near the low
+            and self.data.Close[-1] > np.mean(self.data.Close[-3:]) # Following an uptrend
             ):  
             kstick_signal -= 1
 
