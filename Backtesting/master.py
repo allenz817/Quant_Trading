@@ -25,6 +25,11 @@ class WeightedStrat(Strategy):
     volume_avg_period_short = 10
     adx_period = 14
     
+    stoch_k_period = 14
+    stoch_d_period = 3
+    stoch_upper_bound = 80
+    stoch_lower_bound = 20
+    
     signal_window = 5
     signal_window_short = 3
     
@@ -47,10 +52,11 @@ class WeightedStrat(Strategy):
     adx_weight = 0.25
     # 6-Price Momentum
     price_mmt_weight = 0.25
-    # 7-Null
     
-    # 8-Kstick
+    # 7-Kstick
     kstick_weight = 0.25
+    # 8-Stochastic
+    stoch_weight = 0.25
     
     buy_threshold = 1.0  # Threshold for executing buy orders
     sell_threshold = -1.0  # Threshold for executing sell orders
@@ -75,7 +81,11 @@ class WeightedStrat(Strategy):
         self.adx = self.I(ta.ADX, self.data.High, self.data.Low, close, self.adx_period)
         self.plus_di = self.I(ta.PLUS_DI, self.data.High, self.data.Low, close, self.adx_period)  # Initialize +DI
         self.minus_di = self.I(ta.MINUS_DI, self.data.High, self.data.Low, close, self.adx_period)  # Initialize -DI
-
+        self.stoch_k, self.stoch_d = self.I(
+            ta.STOCH, self.data.High, self.data.Low, close, 
+            fastk_period=self.stoch_k_period, slowk_period=self.stoch_d_period, slowk_matype=0,
+            slowd_period=self.stoch_d_period, slowd_matype=0
+            )
         
         # Calculate weekly indicators
         self.rsi_weekly = resample_apply('W-FRI', ta.RSI, close, self.rsi_daily_days)
@@ -92,6 +102,7 @@ class WeightedStrat(Strategy):
             'adx': [],
             'price_mmt': [],
             'kstick': [],
+            'stoch': [],
             'buy': [],
             'sell': []
         }
@@ -108,6 +119,7 @@ class WeightedStrat(Strategy):
             'price_mmt': np.full(data_length, np.nan),
             'ema_cross': np.full(data_length, np.nan),
             'kstick': np.full(data_length, np.nan),
+            'stoch': np.full(data_length, np.nan),
             'buy': np.full(data_length, np.nan),
             'sell': np.full(data_length, np.nan)
         }
@@ -120,6 +132,7 @@ class WeightedStrat(Strategy):
         self.I(lambda: self.signal_values['price_mmt'], name='Price Momentum Signal')
         self.I(lambda: self.signal_values['ema_cross'], name='EMA Cross Signal')
         self.I(lambda: self.signal_values['kstick'], name='Kstick Signal')
+        self.I(lambda: self.signal_values['stoch'], name='Stochastic Signal')
         self.I(lambda: self.signal_values['buy'], name='Buy Signal')
         self.I(lambda: self.signal_values['sell'], name='Sell Signal')
         
@@ -164,15 +177,18 @@ class WeightedStrat(Strategy):
     
     def eval_macd_weekly(self):
         # 1- MACD crossover
+        deviation_threshold = 1  # Define a threshold for deviation
         if (crossover(self.macd_weekly, self.signal_weekly)
+            and abs(self.macd_weekly[-1] - self.signal_weekly[-1]) > deviation_threshold
             ):
-            macd_signal_1 = 1 
+            signal_1 = 1 
         elif (crossover(self.signal_weekly, self.macd_weekly)
+              and abs(self.macd_weekly[-1] - self.signal_weekly[-1]) > deviation_threshold
               ):
-            macd_signal_1 = -1
-        else: macd_signal_1 = 0
+            signal_1 = -1
+        else: signal_1 = 0
         
-        return macd_signal_1
+        return signal_1
     
     def eval_bb(self, volume, average_volume):
         # 1
@@ -291,11 +307,11 @@ class WeightedStrat(Strategy):
           
         # 2- 3 EMA lines crossing
         if (self.ema5[-1] > self.ema10[-1] > self.ema20[-1] and
-            self.ema5[-10] < self.ema10[-10] < self.ema20[-10] 
+            self.ema5[-5] < self.ema10[-5] < self.ema20[-5] 
             ):
             ema_cross_signal_2 = 1
         elif (self.ema5[-1] < self.ema10[-1] < self.ema20[-1] and
-              self.ema5[-10] > self.ema10[-10] > self.ema20[-10]
+              self.ema5[-5] > self.ema10[-5] > self.ema20[-5]
               ):
             ema_cross_signal_2 = -1
         else: ema_cross_signal_2 = 0
@@ -404,6 +420,15 @@ class WeightedStrat(Strategy):
 
         return kstick_signal
 
+    def eval_stoch(self):
+        # Stochastic Oscillator
+        if crossover(self.stoch_k, self.stoch_d) and self.stoch_k[-1] < self.stoch_lower_bound:
+            return 1
+        elif crossover(self.stoch_d, self.stoch_k) and self.stoch_k[-1] > self.stoch_upper_bound:
+            return -1
+        else:
+            return 0
+
     def next(self):
 
         price = self.data.Close[-1]
@@ -429,6 +454,7 @@ class WeightedStrat(Strategy):
         adx_signal = self.eval_adx()
         price_mmt_signal = self.eval_price_mmt(average_volume_short)
         kstick_signal = self.eval_kstick()
+        stoch_signal = self.eval_stoch()
 
         # Store signals in lists
         self.signals['rsi_daily'].append(rsi_daily_signal)
@@ -440,6 +466,7 @@ class WeightedStrat(Strategy):
         self.signals['adx'].append(adx_signal)
         self.signals['price_mmt'].append(price_mmt_signal)
         self.signals['kstick'].append(kstick_signal)
+        self.signals['stoch'].append(stoch_signal)
 
         # Keep only the last `signal_window` signals
         if len(self.signals['rsi_daily']) > self.signal_window:
@@ -460,6 +487,8 @@ class WeightedStrat(Strategy):
             self.signals['price_mmt'].pop(0)
         if len(self.signals['kstick']) > self.signal_window_short:
             self.signals['kstick'].pop(0)
+        if len(self.signals['stoch']) > self.signal_window_short:
+            self.signals['stoch'].pop(0)
 
         # Calculate total weighted signal value over the lookback period
         buy_signal = (
@@ -472,7 +501,8 @@ class WeightedStrat(Strategy):
             np.max(self.signals['ema_cross']) * self.ema_cross_weight +
             np.max(self.signals['adx']) * self.adx_weight +
             np.max(self.signals['price_mmt']) * self.price_mmt_weight +
-            np.max(self.signals['kstick']) * self.kstick_weight
+            np.max(self.signals['kstick']) * self.kstick_weight +
+            np.max(self.signals['stoch']) * self.stoch_weight
         )
         
         sell_signal = (
@@ -485,7 +515,8 @@ class WeightedStrat(Strategy):
             np.min(self.signals['ema_cross']) * self.ema_cross_weight +
             np.min(self.signals['adx']) * self.adx_weight +
             np.min(self.signals['price_mmt']) * self.price_mmt_weight +
-            np.min(self.signals['kstick']) * self.kstick_weight
+            np.min(self.signals['kstick']) * self.kstick_weight +
+            np.min(self.signals['stoch']) * self.stoch_weight
         )
         
         # Execute order if total weighted signal value exceeds the threshold
@@ -526,6 +557,8 @@ class WeightedStrat(Strategy):
         self.signal_values['price_mmt'][current_day] = price_mmt_signal
         self.signal_values['ema_cross'][current_day] = ema_cross_signal
         self.signal_values['kstick'][current_day] = kstick_signal
+        self.signal_values['stoch'][current_day] = stoch_signal
+        
         self.signal_values['buy'][current_day] = buy_signal
         self.signal_values['sell'][current_day] = sell_signal
 
@@ -546,13 +579,32 @@ bt = Backtest(stock, WeightedStrat, cash=10000, commission=.002, exclusive_order
 output = bt.run()
 """
 output = bt.optimize(
-    rsi_period=range(7, 28),
-    rsi_upper_bound=range(75, 90, 5),
-    rsi_lower_bound=range(20, 30, 5),
-    #maximize = 'Sharpe Ratio',
+    # 1-RSI
+    rsi_daily_weight_buy = np.arange(0, 1, 0.1),
+    rsi_daily_weight_sell = np.arange(0, 1, 0.1),
+    rsi_weekly_weight = np.arange(0, 1, 0.1),
+    # 2-MACD
+    macd_daily_weight = np.arange(0, 1, 0.1),
+    macd_weekly_weight = np.arange(0, 1, 0.1),
+    # 3-Bollinger Bands
+    bb_weight_buy = np.arange(0, 1, 0.1),
+    bb_weight_sell = np.arange(0, 1, 0.1),
+    bb_reversal_weight_buy = np.arange(0, 1, 0.1),
+    bb_reversal_weight_sell = np.arange(0, 1, 0.1),
+    # 4-EMA Cross - crossing between and among price and EMA lines
+    ema_cross_weight = np.arange(0, 1, 0.1),
+    # 5-ADX
+    adx_weight = np.arange(0, 1, 0.1),
+    # 6-Price Momentum
+    price_mmt_weight = np.arange(0, 1, 0.1),
+    # 7-Kstick
+    kstick_weight = np.arange(0, 1, 0.1),
+    # 8-Stochastic
+    stoch_weight = np.arange(0, 1, 0.1),
+    maximize = 'Sharpe Ratio',
     #maximize = optim_func,
-    constraint=lambda p: p.rsi_upper_bound > p.rsi_lower_bound,
-    #max_tries = 100
+    #constraint=lambda p: p.rsi_upper_bound > p.rsi_lower_bound,
+    max_tries = 1000
 )
 """
 
