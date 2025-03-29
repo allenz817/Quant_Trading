@@ -21,14 +21,15 @@ class WeightedStrat(Strategy):
     ema5_period = 5 
     ema10_period = 10
     ema20_period = 20
-    volume_avg_period = 20
-    volume_avg_period_short = 10
     adx_period = 14
     
     stoch_k_period = 14
     stoch_d_period = 3
-    stoch_upper_bound = 80
-    stoch_lower_bound = 20
+    stoch_upper_bound = 75
+    stoch_lower_bound = 25
+    
+    volume_avg_period = 20
+    volume_avg_period_short = 10
     
     signal_window = 5
     signal_window_short = 3
@@ -141,6 +142,43 @@ class WeightedStrat(Strategy):
     # CALCULATION FUNCTIONS
     def calc_bb_width(self):
         return self.bb_upper - self.bb_lower
+    
+    def cal_sup_res(self):
+        # Calculate support and resistance levels
+        support_resistance = {
+            'sup': [],
+            'res': []
+        }
+        # EMA
+        if self.data.Close[-1] > self.ema5[-1]:
+            support_resistance['sup'].append(self.ema5[-1])
+        else:
+            support_resistance['res'].append(self.ema5[-1])
+        if self.data.Close[-1] > self.ema10[-1]:
+            support_resistance['sup'].append(self.ema10[-1])
+        else:
+            support_resistance['res'].append(self.ema10[-1])
+        if self.data.Close[-1] > self.ema20[-1]:
+            support_resistance['sup'].append(self.ema20[-1])
+        else:
+            support_resistance['res'].append(self.ema20[-1])
+        if self.data.Close[-1] > self.ema60[-1]:
+            support_resistance['sup'].append(self.ema60[-1])
+        else:
+            support_resistance['res'].append(self.ema60[-1])
+        # Bollinger Bands
+        support_resistance['sup'].append(self.bb_lower[-1])
+        support_resistance['res'].append(self.bb_upper[-1])
+        if self.data.Close[-1] > self.bb_middle[-1]:
+            support_resistance['sup'].append(self.bb_middle[-1]) 
+        else:
+            support_resistance['res'].append(self.bb_middle[-1])
+            
+        support_resistance['sup'] = sorted(support_resistance['sup'], reverse=True) # Sort in descending order
+        support_resistance['res'] = sorted(support_resistance['res']) # Sort in ascending order
+        
+        return support_resistance
+        
         
     # SIGNAL EVALUATION FUNCTIONS
     def eval_rsi_daily(self):
@@ -380,8 +418,24 @@ class WeightedStrat(Strategy):
         
         return price_mmt_signal_1 + price_mmt_signal_2
     
-    def eval_kstick(self):
+    def eval_kstick(self, average_volume, ema5, bb_mid):
         kstick_signal = 0
+        # Large Green Candle at the Bottom
+        if (self.data.Close[-1] > self.data.Open[-1]   # Current candle is green
+            and (self.data.Close[-1] + self.data.Open[-1]) / 2 < ema5[-1] # Price is at the bottom
+            and self.data.Close[-1] / self.data.Open[-1] > 1.02 # Price increased by >2%
+            and self.data.Volume[-1] / average_volume > self.Volume_ratio_threshold_high # Volume is larger than average
+        ):
+            kstick_signal += 1
+            
+        # Large Red Candle at the Top
+        if (self.data.Close[-1] < self.data.Open[-1]   # Current candle is red
+            and (self.data.Close[-1] + self.data.Open[-1]) / 2 > ema5[-1] # Price is at the top
+            and self.data.Open[-1] / self.data.Close[-1] > 1.02 # Price decreased by >2%
+            and self.data.Volume[-1] / average_volume > self.Volume_ratio_threshold_high # Volume is larger than average
+        ):
+            kstick_signal -= 1
+            
         # Bullish Engulfing
         if (self.data.Close[-2] < self.data.Open[-2] and  # Previous candle is red
             self.data.Close[-1] > self.data.Open[-1] and  # Current candle is green
@@ -453,7 +507,7 @@ class WeightedStrat(Strategy):
         ema_cross_signal = self.eval_ema_cross(price, volume, average_volume)
         adx_signal = self.eval_adx()
         price_mmt_signal = self.eval_price_mmt(average_volume_short)
-        kstick_signal = self.eval_kstick()
+        kstick_signal = self.eval_kstick(average_volume, self.ema5)
         stoch_signal = self.eval_stoch()
 
         # Store signals in lists
