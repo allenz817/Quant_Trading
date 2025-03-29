@@ -16,7 +16,7 @@ def eval_macd_daily(strategy):
 
 def eval_macd_weekly(strategy):
     # 1- MACD crossover
-    deviation_threshold = 1  # Define a threshold for deviation
+    deviation_threshold = 1.5  # Define a threshold for deviation
     if (crossover(strategy.macd_weekly, strategy.signal_weekly)
         and abs(strategy.macd_weekly[-1] - strategy.signal_weekly[-1]) > deviation_threshold
         ):

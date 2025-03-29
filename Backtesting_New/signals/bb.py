@@ -41,12 +41,12 @@ def eval_bb(strategy, average_volume):
     # Extreme reversal signal - top / bottom with enlarged volume
     if (strategy.data.Close[-2] < strategy.bb_lower[-2] and
         (strategy.data.Close[-1] + strategy.data.Open[-1]) / 2 > (strategy.data.Close[-2] + strategy.data.Open[-2]) / 2 and
-        max(strategy.data.Volume[-1], strategy.data.Volume[-2]) / average_volume > strategy.Volume_ratio_threshold_high
+        max(strategy.data.Volume[-1], strategy.data.Volume[-2]) / average_volume > strategy.volume_ratio_threshold_high
         ):
         bb_signal_3 = 1
     elif (strategy.data.Close[-2] > strategy.bb_upper[-2] and
         (strategy.data.Close[-1] + strategy.data.Open[-1]) / 2 < (strategy.data.Close[-2] + strategy.data.Open[-2]) / 2 and
-            max(strategy.data.Volume[-1], strategy.data.Volume[-2]) / average_volume > strategy.Volume_ratio_threshold_high
+            max(strategy.data.Volume[-1], strategy.data.Volume[-2]) / average_volume > strategy.volume_ratio_threshold_high
             ):
         bb_signal_3 = -1
     else: bb_signal_3 = 0

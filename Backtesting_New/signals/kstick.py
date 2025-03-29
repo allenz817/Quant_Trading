@@ -6,7 +6,7 @@ def eval_kstick(strategy, average_volume, ema5):
         if (strategy.data.Close[-1] > strategy.data.Open[-1]   # Current candle is green
             and (strategy.data.Close[-1] + strategy.data.Open[-1]) / 2 < ema5[-1] # Price is at the bottom
             and strategy.data.Close[-1] / strategy.data.Open[-1] > 1.02 # Price increased by >2%
-            and strategy.data.Volume[-1] / average_volume > strategy.Volume_ratio_threshold_high # Volume is larger than average
+            and strategy.data.Volume[-1] / average_volume > strategy.volume_ratio_threshold # Volume is larger than average
         ):
             kstick_signal += 1
             
@@ -14,7 +14,7 @@ def eval_kstick(strategy, average_volume, ema5):
         if (strategy.data.Close[-1] < strategy.data.Open[-1]   # Current candle is red
             and (strategy.data.Close[-1] + strategy.data.Open[-1]) / 2 > ema5[-1] # Price is at the top
             and strategy.data.Open[-1] / strategy.data.Close[-1] > 1.02 # Price decreased by >2%
-            and strategy.data.Volume[-1] / average_volume > strategy.Volume_ratio_threshold_high # Volume is larger than average
+            and strategy.data.Volume[-1] / average_volume > strategy.volume_ratio_threshold # Volume is larger than average
         ):
             kstick_signal -= 1
             

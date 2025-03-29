@@ -11,7 +11,7 @@ from signals import rsi, macd, bb, ema, adx, mmt, kstick, stoch
 
 class WeightedStrat(Strategy):
     # Define parameters and weights for each signal 
-    rsi_daily_days = 14
+    rsi_daily_days = 10
     rsi_upper_bound = 70
     rsi_lower_bound = 30
     fast_period = 12
@@ -64,7 +64,7 @@ class WeightedStrat(Strategy):
     sell_threshold = -1.0  # Threshold for executing sell orders
     adx_threshold = 25
     volume_ratio_threshold = 1.25
-    Volume_ratio_threshold_high = 1.75
+    volume_ratio_threshold_high = 1.75
     
 
     def init(self):
@@ -277,7 +277,7 @@ class WeightedStrat(Strategy):
 
 # BACKTESTING
 # Get financial data from yfinance
-ticker = 'SPY' 
+ticker = 'AAPL' 
 current_date = dt.datetime.now().date()
 end_date = current_date - dt.timedelta(days=1)
 stock = yf.download(ticker, start='2020-01-01', end=end_date)[['Open', 'High', 'Low', 'Close', 'Volume']]
