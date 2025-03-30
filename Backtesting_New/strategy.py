@@ -72,7 +72,7 @@ class WeightedStrat(Strategy):
         #print(len(close))
         # Calculate daily indicators
         self.rsi_daily = self.I(ta.RSI, close, self.rsi_daily_days)
-        self.macd, self.signal, _ = self.I(ta.MACD, close, self.fast_period, self.slow_period, self.signal_period)
+        self.macd, self.signal, self.hist = self.I(ta.MACD, close, self.fast_period, self.slow_period, self.signal_period)
         self.bb_upper, self.bb_middle, self.bb_lower = self.I(ta.BBANDS, close, self.bb_period, self.bb_stdev)
         #self.bb_width = self.I(self.calc_bb_width)
         self.ema5 = self.I(ta.EMA, close, self.ema5_period)

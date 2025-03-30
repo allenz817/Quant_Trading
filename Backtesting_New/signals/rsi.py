@@ -6,11 +6,11 @@ def eval_rsi_daily(strategy):
     return Math.custom_sigmoid(scaled_rsi)
     """
     if (crossover(strategy.rsi_daily, strategy.rsi_lower_bound)
-        and strategy.data.Close[-3] < strategy.rsi_lower_bound[-3]
+        and all(price < strategy.rsi_lower_bound for price in strategy.data.Close[-3:-3])
     ):
         return 1 
     elif (crossover(strategy.rsi_upper_bound, strategy.rsi_daily)
-          and strategy.data.Close[-3] > strategy.rsi_upper_bound[-3]
+          and all(price > strategy.rsi_upper_bound for price in strategy.data.Close[-3:-3])
     ):
         return -1
     else: return 0

@@ -1,13 +1,16 @@
 from backtesting.lib import crossover      
 
 def eval_macd_daily(strategy):
+    threshold = 0.25
     # 1- MACD crossover
     if (crossover(strategy.macd, strategy.signal) and
         30 < strategy.rsi_daily[-1] < 70 # Filter out false signals when price exhibits extreme momentum
+        and abs(strategy.hist[-1] - strategy.hist[-2]) > threshold
         ):
         macd_signal_1 = 1 
     elif (crossover(strategy.signal, strategy.macd) and 
             30 < strategy.rsi_daily[-1] < 70 # Filter out false signals when price exhibits extreme momentum
+            and abs(strategy.hist[-1] - strategy.hist[-2]) > threshold
             ):
         macd_signal_1 = -1
     else: macd_signal_1 = 0
