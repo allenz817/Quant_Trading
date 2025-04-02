@@ -1,5 +1,10 @@
+from backtesting import Strategy, Backtest
+import talib as ta
 import numpy as np
+import datetime as dt
+import yfinance as yf
 
+# SIGNAL EVALUATION
 def eval_bb(strategy, average_volume):
     # 1
     # Bollinger Band support 
@@ -106,3 +111,49 @@ def eval_bb_reversal(strategy, price):
     else:
         return 0
 """
+
+# STANDALONE STRATEGY
+class BBStrategy(Strategy):
+    bb_period = 20
+    bb_stdev = 2.1
+    volume_avg_period = 20
+    volume_ratio_threshold = 1.25
+    volume_ratio_threshold_high = 1.75
+    
+    def init(self):
+        close = self.data.Close
+        self.bb_upper, self.bb_middle, self.bb_lower = self.I(ta.BBANDS, close, self.bb_period, self.bb_stdev)
+        
+    def next(self):
+        average_volume = np.mean(self.data.Volume[-self.volume_avg_period:])
+        bb_signal = eval_bb(self, average_volume)
+        if bb_signal > 0 and not self.position.is_long:
+            self.buy()
+        elif bb_signal < 0 and self.position.is_long:
+            self.position.close()
+
+# STANDALONE BACKTESTING - 57%
+if __name__ == "__main__":
+    # Fetch financial data
+    ticker = 'SPY'
+    current_date = dt.datetime.now().date()
+    end_date = current_date - dt.timedelta(days=1)
+    stock = yf.download(ticker, start='2020-01-01', end=end_date)[['Open', 'High', 'Low', 'Close', 'Volume']]
+    stock.columns = stock.columns.droplevel(1)  # Reshape multi-index columns
+
+    # Run backtest
+    bt = Backtest(stock, BBStrategy, cash=10000, commission=0.002, exclusive_orders=True)
+    output = bt.run()
+    """
+    output = bt.optimize(
+        rsi_daily_days=range(7, 14),
+        rsi_upper_bound=range(70, 90, 5),
+        rsi_lower_bound=range(10, 30, 5),
+        maximize = 'Sharpe Ratio',
+        constraint=lambda p: p.rsi_upper_bound > p.rsi_lower_bound,
+        max_tries = 1000
+    )
+    """
+    print(output._strategy)
+    print(output)
+    bt.plot(filename='backtest_result_bb.html')

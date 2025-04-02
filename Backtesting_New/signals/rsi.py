@@ -31,8 +31,8 @@ def eval_rsi_weekly(self):
 # STANDALONE STRATEGY
 class RSIStrategy(Strategy):
     rsi_daily_days = 12
-    rsi_lower_bound = 30
-    rsi_upper_bound = 80
+    rsi_lower_bound = 25
+    rsi_upper_bound = 75
     
     def init(self):
         close = self.data.Close
