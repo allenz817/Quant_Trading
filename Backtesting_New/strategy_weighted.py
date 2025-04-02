@@ -277,7 +277,7 @@ class WeightedStrat(Strategy):
 
 # BACKTESTING
 # Get financial data from yfinance
-ticker = 'AAPL' 
+ticker = 'SPY' 
 current_date = dt.datetime.now().date()
 end_date = current_date - dt.timedelta(days=1)
 stock = yf.download(ticker, start='2020-01-01', end=end_date)[['Open', 'High', 'Low', 'Close', 'Volume']]
