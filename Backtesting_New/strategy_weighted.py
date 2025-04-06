@@ -14,14 +14,18 @@ class WeightedStrat(Strategy):
     rsi_daily_days = 10
     rsi_upper_bound = 70
     rsi_lower_bound = 30
+    
     fast_period = 12
     slow_period = 26
     signal_period = 9
+    
     bb_period = 20
     bb_stdev = 2.1
+    
     ema5_period = 5 
     ema10_period = 10
     ema20_period = 20
+    
     adx_period = 14
     
     stoch_k_period = 14

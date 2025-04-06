@@ -43,9 +43,9 @@ class RSIStrategy(Strategy):
         self.signal_rsi_daily = eval_rsi_daily(self)
         self.signal_rsi_weekly = eval_rsi_weekly(self)
         self.signal = self.signal_rsi_daily + self.signal_rsi_weekly
-        if self.signal == 1 and not self.position.is_long:
+        if self.signal >= 1 and not self.position.is_long:
             self.buy()
-        elif self.signal == -1 and self.position.is_long:
+        elif self.signal <= -1 and self.position.is_long:
             self.position.close()
         else:
             pass
