@@ -1,7 +1,7 @@
 from backtesting import Backtest, Strategy
 import yfinance as yf
 import datetime as dt
-from strategy_weighted import WeightedStrat
+from Backtesting_New.strategy_combined import WeightedStrat
 
 # BACKTESTING
 # Get financial data from yfinance
