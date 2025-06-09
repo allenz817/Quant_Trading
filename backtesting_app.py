@@ -131,9 +131,35 @@ class BacktestingApp:
                 self.data_file.set("")
                 return False
             
-            self.results_text.insert(tk.END, f"✓ File loaded successfully: {len(df)} rows\n")
-            self.results_text.insert(tk.END, f"  Date range: {df.index[0]} to {df.index[-1]}\n")
-            self.results_text.insert(tk.END, f"  Columns: {', '.join(df.columns)}\n\n")
+            # Check for data type issues
+            original_rows = len(df)
+            
+            # Convert columns to numeric and check for issues
+            for col in required_columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce')
+            
+            # Remove rows with NaN values
+            df_clean = df.dropna()
+            rows_after_cleaning = len(df_clean)
+            
+            if rows_after_cleaning == 0:
+                messagebox.showerror("Invalid Data", "No valid numeric data found in the file")
+                self.data_file.set("")
+                return False
+            
+            if rows_after_cleaning < original_rows:
+                removed_rows = original_rows - rows_after_cleaning
+                self.results_text.insert(tk.END, f"⚠ Warning: {removed_rows} rows with invalid data were removed\n")
+            
+            # Check for negative or zero values
+            if (df_clean <= 0).any().any():
+                messagebox.showerror("Invalid Data", "Data contains zero or negative values")
+                self.data_file.set("")
+                return False
+            
+            self.results_text.insert(tk.END, f"✓ File loaded successfully: {rows_after_cleaning} rows\n")
+            self.results_text.insert(tk.END, f"  Date range: {df_clean.index[0]} to {df_clean.index[-1]}\n")
+            self.results_text.insert(tk.END, f"  Columns: {', '.join(df_clean.columns)}\n\n")
             return True
             
         except Exception as e:
@@ -241,11 +267,23 @@ class BacktestingApp:
             # Select only the required columns in the correct order
             data = data[required_columns]
             
+            # Convert all columns to numeric, replacing any non-numeric values with NaN
+            for col in required_columns:
+                data[col] = pd.to_numeric(data[col], errors='coerce')
+            
             # Remove any rows with NaN values
             data = data.dropna()
             
+            # Ensure all values are positive (stock prices shouldn't be negative)
+            if (data <= 0).any().any():
+                raise ValueError("Data contains zero or negative values")
+            
             # Sort by date
             data = data.sort_index()
+            
+            # Ensure we have enough data points
+            if len(data) < 50:
+                raise ValueError(f"Insufficient data after cleaning: only {len(data)} rows remain")
             
             return data
             
