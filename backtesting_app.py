@@ -131,12 +131,18 @@ class BacktestingApp:
                 self.data_file.set("")
                 return False
             
-            # Check for data type issues
+            # Check for data type issues and clean the data
             original_rows = len(df)
             
-            # Convert columns to numeric and check for issues
-            for col in required_columns:
+            # Clean price data - remove dollar signs and convert to numeric
+            price_columns = ['Open', 'High', 'Low', 'Close']
+            for col in price_columns:
+                df[col] = df[col].astype(str).str.replace('$', '', regex=False)
+                df[col] = df[col].str.replace(',', '', regex=False)
                 df[col] = pd.to_numeric(df[col], errors='coerce')
+            
+            # Convert Volume to numeric
+            df['Volume'] = pd.to_numeric(df['Volume'], errors='coerce')
             
             # Remove rows with NaN values
             df_clean = df.dropna()
@@ -267,18 +273,30 @@ class BacktestingApp:
             # Select only the required columns in the correct order
             data = data[required_columns]
             
-            # Convert all columns to numeric, replacing any non-numeric values with NaN
-            for col in required_columns:
+            # Clean price data - remove dollar signs and convert to numeric
+            price_columns = ['Open', 'High', 'Low', 'Close']
+            for col in price_columns:
+                # Remove dollar signs and any other non-numeric characters except decimal points
+                data[col] = data[col].astype(str).str.replace('$', '', regex=False)
+                data[col] = data[col].str.replace(',', '', regex=False)  # Remove commas if any
                 data[col] = pd.to_numeric(data[col], errors='coerce')
             
+            # Convert Volume column to numeric (it might also have formatting issues)
+            data['Volume'] = pd.to_numeric(data['Volume'], errors='coerce')
+            
             # Remove any rows with NaN values
+            original_length = len(data)
             data = data.dropna()
+            
+            if len(data) < original_length:
+                removed_rows = original_length - len(data)
+                print(f"Removed {removed_rows} rows with invalid data")
             
             # Ensure all values are positive (stock prices shouldn't be negative)
             if (data <= 0).any().any():
                 raise ValueError("Data contains zero or negative values")
             
-            # Sort by date
+            # Sort by date (newest first to oldest last for proper chronological order)
             data = data.sort_index()
             
             # Ensure we have enough data points
@@ -286,7 +304,7 @@ class BacktestingApp:
                 raise ValueError(f"Insufficient data after cleaning: only {len(data)} rows remain")
             
             return data
-            
+        
         except Exception as e:
             raise Exception(f"Error processing data: {str(e)}")
     
