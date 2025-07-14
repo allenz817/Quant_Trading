@@ -1,0 +1,16 @@
+2025-07-14 21:37:28,650 - INFO - System check passed
+2025-07-14 21:37:28,652 - INFO - Schedules configured successfully
+2025-07-14 21:37:28,652 - INFO - Starting automated stock screener scheduler
+2025-07-14 21:37:28,653 - INFO - Configured schedules:
+2025-07-14 21:37:28,653 - INFO -   Job(interval=1, unit=weeks, do=morning_screening, args=(), kwargs={})
+2025-07-14 21:37:28,653 - INFO -   Job(interval=1, unit=weeks, do=morning_screening, args=(), kwargs={})
+2025-07-14 21:37:28,653 - INFO -   Job(interval=1, unit=weeks, do=morning_screening, args=(), kwargs={})
+2025-07-14 21:37:28,653 - INFO -   Job(interval=1, unit=weeks, do=morning_screening, args=(), kwargs={})
+2025-07-14 21:37:28,653 - INFO -   Job(interval=1, unit=weeks, do=morning_screening, args=(), kwargs={})
+2025-07-14 21:37:28,653 - INFO -   Job(interval=1, unit=weeks, do=midday_screening, args=(), kwargs={})
+2025-07-14 21:37:28,654 - INFO -   Job(interval=1, unit=weeks, do=midday_screening, args=(), kwargs={})
+2025-07-14 21:37:28,654 - INFO -   Job(interval=1, unit=weeks, do=midday_screening, args=(), kwargs={})
+2025-07-14 21:37:28,654 - INFO -   Job(interval=1, unit=days, do=evening_screening, args=(), kwargs={})
+2025-07-14 21:37:28,654 - INFO -   Job(interval=1, unit=weeks, do=weekly_screening, args=(), kwargs={})
+2025-07-14 21:37:28,654 - INFO -   Job(interval=1, unit=days, do=earnings_season_screening, args=(), kwargs={})
+2025-07-14 22:00:28,697 - INFO - Scheduler running - Next job: 2025-07-15 07:00:00

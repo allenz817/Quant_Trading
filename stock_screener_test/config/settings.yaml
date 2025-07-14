@@ -1,0 +1,27 @@
+# Futu API Configuration
+futu:
+  host: "127.0.0.1"
+  port: 11111
+  timeout: 10
+
+# Markets to screen
+markets:
+  - "US"
+  - "HK"
+  - "CN"
+
+# Output settings
+output:
+  format: ["excel", "csv"]
+  save_path: "./results/"
+  email_alerts: false
+  
+# Screening frequency
+schedule:
+  run_time: "09:30"  # Market open
+  timezone: "US/Eastern"
+
+# Data caching
+cache:
+  enabled: true
+  ttl_minutes: 30

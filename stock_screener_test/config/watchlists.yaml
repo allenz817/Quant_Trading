@@ -1,0 +1,30 @@
+watchlists:
+  tech_giants:
+    - "AAPL"
+    - "MSFT"
+    - "GOOGL"
+    - "AMZN"
+    - "META"
+    - "TSLA"
+    - "NVDA"
+  
+  financial:
+    - "JPM"
+    - "BAC"
+    - "WFC"
+    - "GS"
+    - "MS"
+    - "C"
+  
+  healthcare:
+    - "JNJ"
+    - "PFE"
+    - "UNH"
+    - "ABBV"
+    - "MRK"
+    - "BMY"
+  
+  custom:
+    # Add your own stock symbols here
+    - "SPY"
+    - "QQQ"

@@ -1,0 +1,49 @@
+value_stocks:
+  financial:
+    pe_ratio: {min: 5, max: 15}
+    pb_ratio: {max: 1.5}
+    debt_to_equity: {max: 0.5}
+    roe: {min: 12}
+  market:
+    market_cap: {min: 1000000000}  # $1B+
+    
+growth_stocks:
+  financial:
+    revenue_growth: {min: 15}
+    earnings_growth: {min: 20}
+    pe_ratio: {max: 30}
+  technical:
+    price_change_52w: {min: 10}
+    
+momentum_breakout:
+  technical:
+    price_change_1d: {min: 3}
+    volume_ratio: {min: 2.0}
+    rsi: {min: 60, max: 80}
+    price_above_ma20: true
+    
+oversold_bounce:
+  technical:
+    rsi: {min: 20, max: 35}
+    price_change_5d: {min: -10, max: -2}
+    volume_ratio: {min: 1.5}
+  financial:
+    pe_ratio: {max: 25}
+    
+dividend_stocks:
+  financial:
+    dividend_yield: {min: 3}
+    payout_ratio: {max: 70}
+    debt_to_equity: {max: 0.6}
+    roe: {min: 10}
+  market:
+    market_cap: {min: 500000000}  # $500M+
+
+small_cap_growth:
+  financial:
+    revenue_growth: {min: 25}
+    pe_ratio: {max: 35}
+  market:
+    market_cap: {min: 100000000, max: 2000000000}  # $100M - $2B
+  technical:
+    price_change_1m: {min: 5}
