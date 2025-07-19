@@ -1,1 +1,12 @@
 2025-07-14 21:35:27,854 - __main__ - INFO - Starting stock screening - Strategy: all, Market: US
+2025-07-15 20:23:41,100 - __main__ - INFO - Starting stock screening - Strategy: growth_stocks,momentum_breakout,small_cap_rockets, Market: US
+2025-07-15 20:53:42,214 - __main__ - INFO - Starting stock screening - Strategy: momentum_breakout,oversold_bounce, Market: US
+2025-07-15 21:23:39,969 - __main__ - INFO - Starting stock screening - Strategy: all, Market: US
+2025-07-17 21:59:54,911 - __main__ - INFO - Starting stock screening - Strategy: growth_stocks,momentum_breakout,small_cap_rockets, Market: US
+2025-07-17 22:29:52,001 - __main__ - INFO - Starting stock screening - Strategy: momentum_breakout,oversold_bounce, Market: US
+2025-07-19 10:12:00,388 - __main__ - INFO - Starting stock screening - Strategy: value_stocks,quality_growth, Market: US
+2025-07-19 10:41:57,972 - __main__ - INFO - Starting stock screening - Strategy: momentum_breakout,oversold_bounce, Market: US
+2025-07-19 11:12:58,228 - __main__ - INFO - Starting stock screening - Strategy: growth_stocks,momentum_breakout,small_cap_rockets, Market: US
+2025-07-19 11:43:00,585 - __main__ - INFO - Starting stock screening - Strategy: momentum_breakout,oversold_bounce, Market: US
+2025-07-19 19:38:30,404 - __main__ - INFO - Starting stock screening - Strategy: value_stocks,quality_growth, Market: US
+2025-07-19 20:08:29,930 - __main__ - INFO - Starting stock screening - Strategy: all, Market: US

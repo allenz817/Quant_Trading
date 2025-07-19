@@ -14,3 +14,37 @@
 2025-07-14 21:37:28,654 - INFO -   Job(interval=1, unit=weeks, do=weekly_screening, args=(), kwargs={})
 2025-07-14 21:37:28,654 - INFO -   Job(interval=1, unit=days, do=earnings_season_screening, args=(), kwargs={})
 2025-07-14 22:00:28,697 - INFO - Scheduler running - Next job: 2025-07-15 07:00:00
+2025-07-15 20:23:37,483 - INFO - Starting earnings season screening
+2025-07-15 20:23:37,485 - INFO - Running screening: python main.py --strategy growth_stocks,momentum_breakout,small_cap_rockets --market US --output both --quick-filter --watchlist-export --max-results 30
+2025-07-15 20:53:38,754 - ERROR - Screening timed out after 30 minutes
+2025-07-15 20:53:38,756 - INFO - Starting morning screening routine
+2025-07-15 20:53:38,757 - INFO - Running screening: python main.py --strategy momentum_breakout,oversold_bounce --market US --output both --quick-filter --watchlist-export --max-results 30
+2025-07-15 21:23:38,780 - ERROR - Screening timed out after 30 minutes
+2025-07-15 21:23:38,782 - INFO - Starting evening comprehensive screening
+2025-07-15 21:23:38,782 - INFO - Running screening: python main.py --strategy all --market US --output both --quick-filter --watchlist-export --max-results 30
+2025-07-17 21:58:50,375 - ERROR - Screening timed out after 30 minutes
+2025-07-17 21:59:50,377 - INFO - Starting earnings season screening
+2025-07-17 21:59:50,377 - INFO - Running screening: python main.py --strategy growth_stocks,momentum_breakout,small_cap_rockets --market US --output both --quick-filter --watchlist-export --max-results 30
+2025-07-17 22:29:50,473 - ERROR - Screening timed out after 30 minutes
+2025-07-17 22:29:50,476 - INFO - Starting morning screening routine
+2025-07-17 22:29:50,476 - INFO - Running screening: python main.py --strategy momentum_breakout,oversold_bounce --market US --output both --quick-filter --watchlist-export --max-results 30
+2025-07-19 10:11:56,727 - ERROR - Screening timed out after 30 minutes
+2025-07-19 10:11:56,729 - INFO - Starting midday screening routine
+2025-07-19 10:11:56,729 - INFO - Running screening: python main.py --strategy value_stocks,quality_growth --market US --output csv --quick-filter --watchlist-export --max-results 30
+2025-07-19 10:41:56,886 - ERROR - Screening timed out after 30 minutes
+2025-07-19 10:41:56,888 - INFO - Starting morning screening routine
+2025-07-19 10:41:56,888 - INFO - Running screening: python main.py --strategy momentum_breakout,oversold_bounce --market US --output both --quick-filter --watchlist-export --max-results 30
+2025-07-19 11:11:56,985 - ERROR - Screening timed out after 30 minutes
+2025-07-19 11:12:56,989 - INFO - Starting earnings season screening
+2025-07-19 11:12:56,989 - INFO - Running screening: python main.py --strategy growth_stocks,momentum_breakout,small_cap_rockets --market US --output both --quick-filter --watchlist-export --max-results 30
+2025-07-19 11:42:57,076 - ERROR - Screening timed out after 30 minutes
+2025-07-19 11:42:57,076 - INFO - Starting morning screening routine
+2025-07-19 11:42:57,077 - INFO - Running screening: python main.py --strategy momentum_breakout,oversold_bounce --market US --output both --quick-filter --watchlist-export --max-results 30
+2025-07-19 19:38:28,737 - ERROR - Screening timed out after 30 minutes
+2025-07-19 19:38:28,738 - INFO - Starting midday screening routine
+2025-07-19 19:38:28,739 - INFO - Running screening: python main.py --strategy value_stocks,quality_growth --market US --output csv --quick-filter --watchlist-export --max-results 30
+2025-07-19 20:08:28,797 - ERROR - Screening timed out after 30 minutes
+2025-07-19 20:08:28,797 - INFO - Starting evening comprehensive screening
+2025-07-19 20:08:28,800 - INFO - Running screening: python main.py --strategy all --market US --output both --quick-filter --watchlist-export --max-results 30
+2025-07-19 20:38:28,855 - ERROR - Screening timed out after 30 minutes
+2025-07-19 21:00:28,890 - INFO - Scheduler running - Next job: 2025-07-20 07:00:00
