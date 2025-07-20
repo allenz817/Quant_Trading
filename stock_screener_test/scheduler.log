@@ -48,3 +48,26 @@
 2025-07-19 20:08:28,800 - INFO - Running screening: python main.py --strategy all --market US --output both --quick-filter --watchlist-export --max-results 30
 2025-07-19 20:38:28,855 - ERROR - Screening timed out after 30 minutes
 2025-07-19 21:00:28,890 - INFO - Scheduler running - Next job: 2025-07-20 07:00:00
+2025-07-20 08:46:00,058 - INFO - Starting earnings season screening
+2025-07-20 08:46:00,059 - INFO - Running screening: python main.py --strategy growth_stocks,momentum_breakout,small_cap_rockets --market US --output both --quick-filter --watchlist-export --max-results 30
+2025-07-20 10:09:46,355 - ERROR - Screening timed out after 30 minutes
+2025-07-20 10:10:46,368 - INFO - Starting weekly comprehensive screening
+2025-07-20 10:10:46,368 - INFO - Screening US market
+2025-07-20 10:10:46,368 - INFO - Running screening: python main.py --strategy all --market US --output both --quick-filter --watchlist-export --max-results 30
+2025-07-20 10:40:46,387 - ERROR - Screening timed out after 30 minutes
+2025-07-20 10:41:46,425 - INFO - Screening HK market
+2025-07-20 10:41:46,425 - INFO - Running screening: python main.py --strategy all --market HK --output both --quick-filter --watchlist-export --max-results 30
+2025-07-20 11:11:46,463 - ERROR - Screening timed out after 30 minutes
+2025-07-20 12:00:46,485 - INFO - Scheduler running - Next job: 2025-07-20 18:00:00
+2025-07-20 13:00:46,508 - INFO - Scheduler running - Next job: 2025-07-20 18:00:00
+2025-07-20 14:00:46,533 - INFO - Scheduler running - Next job: 2025-07-20 18:00:00
+2025-07-20 15:00:46,566 - INFO - Scheduler running - Next job: 2025-07-20 18:00:00
+2025-07-20 16:00:46,586 - INFO - Scheduler running - Next job: 2025-07-20 18:00:00
+2025-07-20 17:00:46,380 - INFO - Scheduler running - Next job: 2025-07-20 18:00:00
+2025-07-20 18:00:46,399 - INFO - Scheduler running - Next job: 2025-07-20 18:00:00
+2025-07-20 18:00:46,407 - INFO - Starting evening comprehensive screening
+2025-07-20 18:00:46,410 - INFO - Running screening: python main.py --strategy all --market US --output both --quick-filter --watchlist-export --max-results 30
+2025-07-20 18:30:46,660 - ERROR - Screening timed out after 30 minutes
+2025-07-20 19:00:46,856 - INFO - Scheduler running - Next job: 2025-07-21 07:00:00
+2025-07-20 20:00:47,035 - INFO - Scheduler running - Next job: 2025-07-21 07:00:00
+2025-07-20 21:00:47,104 - INFO - Scheduler running - Next job: 2025-07-21 07:00:00
